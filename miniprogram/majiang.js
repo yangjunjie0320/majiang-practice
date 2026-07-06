@@ -335,38 +335,61 @@ const Majiang = (() => {
     }
   }
 
-  // 未下叫题：胡牌去一张、补一张随机牌，答案是所有打完即下叫的打法。
+  // 14 张手牌中所有打完即下叫的打法及各自听的牌。
+  function tingOptions(counts, missingSuit) {
+    const options = [];
+    for (let x = 0; x < 27; x++) {
+      if (counts[x] === 0) continue;
+      counts[x] -= 1;
+      // 先只算向听，命中 0 才算听牌明细
+      if (shanten(counts, missingSuit) === 0) {
+        const u = ukeire(counts, missingSuit);
+        // total==0 是形式听牌（听的牌全在自己手里），不算有效下叫
+        if (u.total > 0) {
+          options.push({ tile: indexToTile(x), waits: u.tiles, count: u.total });
+        }
+      }
+      counts[x] += 1;
+    }
+    return options;
+  }
+
+  // 未下叫题：胡牌随机去一张，枚举补一张的所有可能，
+  // 取能下叫的打法最多（选择最多、最难）的一种。
   function makeDiscardProblem(rng = Math.random) {
     for (;;) {
       const kept = sampleTwoSuits(rng);
-      const missingSuit = SUITS["012".split("").map(Number).find((s) => !kept.includes(s))];
+      const missingSuit = SUITS[[0, 1, 2].find((s) => !kept.includes(s))];
       const counts = randomCompleteHand(rng, kept);
       if (counts === null || !isWin(counts)) continue;
       counts[tileIndex(choice(rng, tilesFromCounts(counts)))] -= 1;
-      for (;;) {
-        const i = choice(rng, kept) * 9 + randInt(rng, 9);
-        if (counts[i] < 4) { counts[i] += 1; break; }
-      }
-      if (isWin(counts)) continue;
 
-      const tingOptions = [];
-      for (let i = 0; i < 27; i++) {
-        if (counts[i] === 0) continue;
-        counts[i] -= 1;
-        const u = ukeire(counts, missingSuit);
-        counts[i] += 1;
-        // total==0 是形式听牌（听的牌全在自己手里），不算有效下叫
-        if (u.shanten === 0 && u.total > 0) {
-          tingOptions.push({ tile: indexToTile(i), waits: u.tiles, count: u.total });
+      let variants = [];
+      let most = 0;
+      for (const s of kept) {
+        for (let r = 0; r < 9; r++) {
+          const i = s * 9 + r;
+          if (counts[i] >= 4) continue;
+          counts[i] += 1;
+          if (!isWin(counts)) {
+            const options = tingOptions(counts, missingSuit);
+            if (options.length > 0 && options.length >= most) {
+              if (options.length > most) { most = options.length; variants = []; }
+              variants.push({ add: i, options });
+            }
+          }
+          counts[i] -= 1;
         }
       }
-      if (tingOptions.length === 0) continue;
-      tingOptions.sort((a, b) => b.count - a.count);
+      if (variants.length === 0) continue;
+      const pick = choice(rng, variants);
+      counts[pick.add] += 1;
+      pick.options.sort((a, b) => b.count - a.count);
       return {
         mode: "discard",
         hand: sortTiles(tilesFromCounts(counts)),
         missing_suit: missingSuit,
-        answer: { best: tingOptions.map((d) => d.tile), detail: tingOptions },
+        answer: { best: pick.options.map((d) => d.tile), detail: pick.options },
       };
     }
   }
