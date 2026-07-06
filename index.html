@@ -51,10 +51,11 @@
 <div id="verdict"></div>
 <div id="result"></div>
 
+<script src="majiang.js"></script>
 <script>
 "use strict";
-const SUIT_NAMES = { m: "万", s: "条", p: "筒" };
-const fmt = t => t[0] + SUIT_NAMES[t[1]];
+const SUIT_NAMES = Majiang.SUIT_NAMES;
+const fmt = Majiang.formatTile;
 const $ = id => document.getElementById(id);
 
 let mode = "ting";
@@ -69,14 +70,12 @@ function tileSpan(t, tag = "span") {
   return el;
 }
 
-async function loadProblem() {
+function loadProblem() {
   answered = false;
   $("verdict").textContent = "";
   $("verdict").className = "";
   $("result").innerHTML = "";
-  $("problem").innerHTML = "加载中…";
-  const resp = await fetch("/api/problem/" + mode);
-  problem = await resp.json();
+  problem = mode === "ting" ? Majiang.makeTingProblem() : Majiang.makeDiscardProblem();
   render();
 }
 

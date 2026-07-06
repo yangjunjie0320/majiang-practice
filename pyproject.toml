@@ -2,13 +2,10 @@
 name = "majiang-practice"
 version = "0.1.0"
 requires-python = ">=3.13"
-dependencies = [
-    "fastapi>=0.139.0",
-    "uvicorn>=0.50.1",
-]
+dependencies = []
 
 [dependency-groups]
 dev = [
-    "httpx>=0.28.1",
+    "playwright>=1.61.0",
     "pytest>=9.1.1",
 ]
