@@ -1,7 +1,7 @@
 <view class="page">
   <view class="tabs">
-    <view class="tab {{mode == 'ting' ? 'active' : ''}}" data-mode="ting" bindtap="switchMode">查叫：这手牌胡啥</view>
-    <view class="tab {{mode == 'discard' ? 'active' : ''}}" data-mode="discard" bindtap="switchMode">下叫：该打哪张</view>
+    <view class="tab {{mode == 'ting' ? 'active' : ''}}" data-mode="ting" bindtap="switchMode">听牌练习</view>
+    <view class="tab {{mode == 'discard' ? 'active' : ''}}" data-mode="discard" bindtap="switchMode">下叫练习</view>
   </view>
   <view class="tabs diff">
     <view class="hint">难度：</view>
