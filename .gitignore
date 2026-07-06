@@ -1,0 +1,15 @@
+config.yaml
+.env
+state/
+cookies/
+browser-data/
+logs/
+.venv/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+
+CLAUDE.md
+DESIGN.md
