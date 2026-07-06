@@ -25,6 +25,22 @@ const Majiang = (() => {
     return tile[0] + SUIT_NAMES[tile[1]];
   }
 
+  // ---- 牌面（供 UI 绘制，纯数据）----
+
+  const NUMERALS = ["一", "二", "三", "四", "五", "六", "七", "八", "九"];
+  // 条/筒每行的图案数，按真实麻将牌排布
+  const FACE_ROWS = {
+    s: [[1], [1, 1], [1, 2], [2, 2], [2, 1, 2], [3, 3], [1, 3, 3], [3, 2, 3], [3, 3, 3]],
+    p: [[1], [1, 1], [1, 1, 1], [2, 2], [2, 1, 2], [2, 2, 2], [3, 2, 2], [2, 2, 2, 2], [3, 3, 3]],
+  };
+
+  // 万 → {numeral}；条/筒 → {rows}（每行图案数）
+  function tileFace(tile) {
+    const rank = Number(tile[0]);
+    if (tile[1] === "m") return { numeral: NUMERALS[rank - 1] };
+    return { rows: FACE_ROWS[tile[1]][rank - 1] };
+  }
+
   function countsFromTiles(tiles) {
     const counts = new Array(27).fill(0);
     for (const t of tiles) counts[tileIndex(t)] += 1;
@@ -373,7 +389,7 @@ const Majiang = (() => {
 
   return {
     SUITS, SUIT_NAMES,
-    tileIndex, indexToTile, formatTile,
+    tileIndex, indexToTile, formatTile, tileFace,
     countsFromTiles, tilesFromCounts, sortTiles, suitsIn,
     isWin, fan, shanten, ukeire,
     makeTingProblem, makeDiscardProblem,
