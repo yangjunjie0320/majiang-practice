@@ -1,14 +1,3 @@
-<template name="tileFace">
-  <block wx:if="{{face.numeral}}">
-    <text class="num">{{face.numeral}}</text><text class="wan">萬</text>
-  </block>
-  <block wx:else>
-    <view wx:for="{{face.rows}}" wx:for-item="n" wx:for-index="ri" wx:key="ri" class="row">
-      <view wx:for="{{n}}" wx:key="index" class="{{suit == 's' ? 'stick' : 'dot'}}"></view>
-    </view>
-  </block>
-</template>
-
 <view class="page">
   <view class="tabs">
     <view class="tab {{mode == 'ting' ? 'active' : ''}}" data-mode="ting" bindtap="switchMode">已下叫：胡哪些牌</view>
@@ -18,15 +7,15 @@
   <block wx:if="{{mode == 'ting'}}">
     <view class="hint">手牌（已下叫）：</view>
     <view class="tiles">
-      <view wx:for="{{hand}}" wx:key="index" class="tile {{item.suit}} {{item.rowsClass}}">
-        <template is="tileFace" data="{{face: item.face, suit: item.suit}}"/>
+      <view wx:for="{{hand}}" wx:key="index" class="tile">
+        <image class="face" src="{{item.src}}" mode="aspectFit"/>
       </view>
     </view>
     <view class="hint">点选所有能胡的牌，然后提交：</view>
     <view class="tiles">
       <view wx:for="{{candidates}}" wx:key="index" data-i="{{index}}" bindtap="toggleTile"
-            class="tile {{item.suit}} {{item.rowsClass}} {{item.sel ? 'selected' : ''}} {{item.mark}}">
-        <template is="tileFace" data="{{face: item.face, suit: item.suit}}"/>
+            class="tile {{item.sel ? 'selected' : ''}} {{item.mark}}">
+        <image class="face" src="{{item.src}}" mode="aspectFit"/>
       </view>
     </view>
   </block>
@@ -34,9 +23,8 @@
   <block wx:else>
     <view class="hint">定缺<text class="bold">{{missingName}}</text>，摸牌后 14 张。点击打出一张，使手牌下叫：</view>
     <view class="tiles">
-      <view wx:for="{{hand}}" wx:key="index" data-i="{{index}}" bindtap="discardTap"
-            class="tile {{item.suit}} {{item.rowsClass}}">
-        <template is="tileFace" data="{{face: item.face, suit: item.suit}}"/>
+      <view wx:for="{{hand}}" wx:key="index" data-i="{{index}}" bindtap="discardTap" class="tile">
+        <image class="face" src="{{item.src}}" mode="aspectFit"/>
       </view>
     </view>
   </block>

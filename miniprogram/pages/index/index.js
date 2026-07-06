@@ -1,14 +1,12 @@
 const Majiang = require("../../majiang.js");
 
-// WXML 里不能调用函数，牌的显示文本、牌面数据和花色 class 在 setData 前算好
+// WXML 里不能调用函数，牌的显示文本和图片路径在 setData 前算好
 function deco(tile) {
-  const face = Majiang.tileFace(tile);
   return {
     tile,
     text: Majiang.formatTile(tile),
     suit: tile[1],
-    face,
-    rowsClass: face.rows ? `rows${face.rows.length}` : "",
+    src: `/assets/tiles/${tile[1]}${tile[0]}.png`,
     sel: false,
     mark: "",
   };

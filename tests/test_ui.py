@@ -33,12 +33,10 @@ def test_ting_next_guard(app_page):
     page.locator("#candidates button").nth(0).click()
     page.locator("#next").click()
     assert page.locator("#verdict").inner_text() != ""
-    hand_before = page.locator("#problem").inner_text()
+    hand_js = "[...document.querySelectorAll('#problem .tile')].map(e => e.dataset.tile).join()"
+    hand_before = page.evaluate(hand_js)
     page.locator("#next").click()
-    page.wait_for_function(
-        "prev => document.getElementById('problem').innerText !== prev",
-        arg=hand_before,
-    )
+    page.wait_for_function(f"prev => {hand_js} !== prev", arg=hand_before)
 
 
 def test_discard_flow(app_page):

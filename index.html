@@ -13,23 +13,12 @@
                  border: 1px solid #999; background: #fff; border-radius: 6px; }
   .tabs button.active { background: #2c3e50; color: #fff; border-color: #2c3e50; }
   .hint { color: #666; margin: 12px 0 6px; }
-  .tile { display: inline-flex; flex-direction: column; justify-content: center;
-          align-items: center; gap: 2px; width: 44px; height: 60px; padding: 0;
+  .tile { display: inline-flex; justify-content: center; align-items: center;
+          width: 46px; height: 62px; padding: 0;
           margin: 2px; border: 1px solid #b8b2a6; border-radius: 7px;
           background: linear-gradient(#fffef9, #f1ecdd);
           box-shadow: 0 2px 3px rgba(0,0,0,.18); user-select: none; }
-  .tile .num { font-size: 20px; line-height: 1.1; color: #2c3e50; font-weight: bold; }
-  .tile .wan { font-size: 17px; line-height: 1.1; color: #c0392b; font-weight: bold; }
-  .tile .row { display: flex; gap: 3px; justify-content: center; }
-  .tile .dot { width: 11px; height: 11px; border-radius: 50%;
-               background: radial-gradient(circle at 35% 35%, #85b4e0, #2980b9 65%, #1a5276);
-               box-shadow: inset 0 0 0 1px #1a5276; }
-  .tile .stick { width: 7px; height: 14px; border-radius: 3px;
-                 background: linear-gradient(90deg, #2ecc71, #1e8449); }
-  .tile.rows1 .dot { width: 22px; height: 22px; }
-  .tile.rows1 .stick { width: 10px; height: 30px; background: linear-gradient(90deg, #e74c3c, #b03a2e); }
-  .tile.rows2 .stick { height: 20px; }
-  .tile.rows4 .dot { width: 9px; height: 9px; }
+  .tile .face { width: 90%; height: 90%; object-fit: contain; pointer-events: none; }
   button.tile { cursor: pointer; }
   button.tile.selected { outline: 3px solid #2c3e50; }
   button.tile.good { background: #d4efdf; border-color: #27ae60; }
@@ -77,17 +66,9 @@ let answered = false;
 
 function tileSpan(t, tag = "span") {
   const el = document.createElement(tag);
-  const face = Majiang.tileFace(t);
-  el.className = "tile " + t[1] + (face.rows ? " rows" + face.rows.length : "");
+  el.className = "tile " + t[1];
   el.title = fmt(t);
-  if (face.numeral) {
-    el.innerHTML = `<span class="num">${face.numeral}</span><span class="wan">萬</span>`;
-  } else {
-    const shape = t[1] === "s" ? "stick" : "dot";
-    el.innerHTML = face.rows
-      .map(n => `<span class="row">${`<i class="${shape}"></i>`.repeat(n)}</span>`)
-      .join("");
-  }
+  el.innerHTML = `<img class="face" src="assets/tiles/${t[1]}${t[0]}.svg" alt="${fmt(t)}">`;
   el.dataset.tile = t;
   return el;
 }
