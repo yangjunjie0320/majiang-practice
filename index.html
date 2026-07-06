@@ -12,6 +12,9 @@
   .tabs button { font-size: 1em; padding: 6px 16px; margin-right: 8px; cursor: pointer;
                  border: 1px solid #999; background: #fff; border-radius: 6px; }
   .tabs button.active { background: #2c3e50; color: #fff; border-color: #2c3e50; }
+  .tabs.diff { margin-top: 8px; }
+  .tabs.diff button { font-size: 0.9em; padding: 4px 12px; }
+  .tile-row { margin: 3px 0; }
   .hint { color: #666; margin: 12px 0 6px; }
   .tile { display: inline-flex; justify-content: center; align-items: center;
           width: 46px; height: 62px; padding: 0;
@@ -45,6 +48,12 @@
   <button id="tab-ting" class="active">已下叫：胡哪些牌</button>
   <button id="tab-discard">未下叫：打哪张</button>
 </div>
+<div class="tabs diff">
+  <span class="hint">难度：</span>
+  <button data-diff="easy">简单</button>
+  <button data-diff="normal" class="active">普通</button>
+  <button data-diff="hard">困难</button>
+</div>
 <div id="problem"></div>
 <div class="actions">
   <button id="submit" hidden>提交</button>
@@ -61,8 +70,24 @@ const fmt = Majiang.formatTile;
 const $ = id => document.getElementById(id);
 
 let mode = "ting";
+let difficulty = "normal";
 let problem = null;
 let answered = false;
+
+// 两个花色分成两行显示
+function tileRows(tiles, build) {
+  const wrap = document.createElement("div");
+  const bySuit = {};
+  tiles.forEach(t => (bySuit[t[1]] = bySuit[t[1]] || []).push(t));
+  for (const s of "msp") {
+    if (!bySuit[s]) continue;
+    const row = document.createElement("div");
+    row.className = "tile-row";
+    bySuit[s].forEach(t => row.appendChild(build(t)));
+    wrap.appendChild(row);
+  }
+  return wrap;
+}
 
 function tileSpan(t, tag = "span") {
   const el = document.createElement(tag);
@@ -78,24 +103,23 @@ function loadProblem() {
   $("verdict").textContent = "";
   $("verdict").className = "";
   $("result").innerHTML = "";
-  problem = mode === "ting" ? Majiang.makeTingProblem() : Majiang.makeDiscardProblem();
+  problem = mode === "ting"
+    ? Majiang.makeTingProblem(Math.random, difficulty)
+    : Majiang.makeDiscardProblem(Math.random, difficulty);
   render();
 }
 
 function render() {
   const box = $("problem");
   box.innerHTML = "";
-  const handDiv = document.createElement("div");
   if (mode === "ting") {
     box.insertAdjacentHTML("beforeend", '<p class="hint">手牌（已下叫）：</p>');
-    problem.hand.forEach(t => handDiv.appendChild(tileSpan(t)));
-    box.appendChild(handDiv);
+    box.appendChild(tileRows(problem.hand, t => tileSpan(t)));
     box.insertAdjacentHTML("beforeend", '<p class="hint">点选所有能胡的牌，然后提交：</p>');
-    const cand = document.createElement("div");
-    problem.candidates.forEach(t => {
+    const cand = tileRows(problem.candidates, t => {
       const b = tileSpan(t, "button");
       b.onclick = () => { if (!answered) b.classList.toggle("selected"); };
-      cand.appendChild(b);
+      return b;
     });
     cand.id = "candidates";
     box.appendChild(cand);
@@ -104,12 +128,11 @@ function render() {
   } else {
     box.insertAdjacentHTML("beforeend",
       `<p class="hint">定缺<b>${SUIT_NAMES[problem.missing_suit]}</b>，摸牌后 14 张。点击打出一张，使手牌下叫：</p>`);
-    problem.hand.forEach(t => {
+    box.appendChild(tileRows(problem.hand, t => {
       const b = tileSpan(t, "button");
       b.onclick = () => { if (!answered) judgeDiscard(t); };
-      handDiv.appendChild(b);
-    });
-    box.appendChild(handDiv);
+      return b;
+    }));
     $("submit").hidden = true;
   }
 }
@@ -168,6 +191,14 @@ $("next").onclick = () => {
 };
 $("tab-ting").onclick = () => switchMode("ting");
 $("tab-discard").onclick = () => switchMode("discard");
+document.querySelectorAll(".diff button").forEach(b => {
+  b.onclick = () => {
+    difficulty = b.dataset.diff;
+    document.querySelectorAll(".diff button").forEach(x =>
+      x.classList.toggle("active", x === b));
+    loadProblem();
+  };
+});
 function switchMode(m) {
   mode = m;
   $("tab-ting").classList.toggle("active", m === "ting");

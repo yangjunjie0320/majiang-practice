@@ -3,17 +3,23 @@
     <view class="tab {{mode == 'ting' ? 'active' : ''}}" data-mode="ting" bindtap="switchMode">已下叫：胡哪些牌</view>
     <view class="tab {{mode == 'discard' ? 'active' : ''}}" data-mode="discard" bindtap="switchMode">未下叫：打哪张</view>
   </view>
+  <view class="tabs diff">
+    <view class="hint">难度：</view>
+    <view class="tab small {{difficulty == 'easy' ? 'active' : ''}}" data-diff="easy" bindtap="setDifficulty">简单</view>
+    <view class="tab small {{difficulty == 'normal' ? 'active' : ''}}" data-diff="normal" bindtap="setDifficulty">普通</view>
+    <view class="tab small {{difficulty == 'hard' ? 'active' : ''}}" data-diff="hard" bindtap="setDifficulty">困难</view>
+  </view>
 
   <block wx:if="{{mode == 'ting'}}">
     <view class="hint">手牌（已下叫）：</view>
-    <view class="tiles">
-      <view wx:for="{{hand}}" wx:key="index" class="tile">
+    <view wx:for="{{handRows}}" wx:for-item="row" wx:for-index="r" wx:key="r" class="tiles">
+      <view wx:for="{{row}}" wx:key="index" class="tile">
         <image class="face" src="{{item.src}}" mode="aspectFit"/>
       </view>
     </view>
     <view class="hint">点选所有能胡的牌，然后提交：</view>
-    <view class="tiles">
-      <view wx:for="{{candidates}}" wx:key="index" data-i="{{index}}" bindtap="toggleTile"
+    <view wx:for="{{candidateRows}}" wx:for-item="row" wx:for-index="r" wx:key="r" class="tiles">
+      <view wx:for="{{row}}" wx:key="index" data-r="{{r}}" data-i="{{index}}" bindtap="toggleTile"
             class="tile {{item.sel ? 'selected' : ''}} {{item.mark}}">
         <image class="face" src="{{item.src}}" mode="aspectFit"/>
       </view>
@@ -22,8 +28,8 @@
 
   <block wx:else>
     <view class="hint">定缺<text class="bold">{{missingName}}</text>，摸牌后 14 张。点击打出一张，使手牌下叫：</view>
-    <view class="tiles">
-      <view wx:for="{{hand}}" wx:key="index" data-i="{{index}}" bindtap="discardTap" class="tile">
+    <view wx:for="{{handRows}}" wx:for-item="row" wx:for-index="r" wx:key="r" class="tiles">
+      <view wx:for="{{row}}" wx:key="index" data-r="{{r}}" data-i="{{index}}" bindtap="discardTap" class="tile">
         <image class="face" src="{{item.src}}" mode="aspectFit"/>
       </view>
     </view>

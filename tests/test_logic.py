@@ -109,6 +109,21 @@ CHECKS = """
     }
   }
 
+  // ---- 难度分档：答案数必须落在档位内 ----
+  const rng3 = mulberry32(99);
+  for (const [diff, lo, hi] of [["easy",1,2],["normal",3,3],["hard",4,99]]) {
+    for (let k = 0; k < 5; k++) {
+      const n = M.makeTingProblem(rng3, diff).answer.hu_tiles.length;
+      check(`ting-${diff} 答案数 ${n}`, n >= lo && n <= hi);
+    }
+  }
+  for (const [diff, lo, hi] of [["easy",1,2],["normal",3,4],["hard",5,99]]) {
+    for (let k = 0; k < 5; k++) {
+      const n = M.makeDiscardProblem(rng3, diff).answer.best.length;
+      check(`discard-${diff} 答案数 ${n}`, n >= lo && n <= hi);
+    }
+  }
+
   return fails;
 }
 """

@@ -2,12 +2,14 @@
 .bold { font-weight: bold; }
 .hint { color: #666; margin: 20rpx 0 10rpx; font-size: 28rpx; }
 
-.tabs { display: flex; gap: 16rpx; margin-bottom: 8rpx; }
+.tabs { display: flex; gap: 16rpx; margin-bottom: 8rpx; align-items: center; }
 .tab { padding: 12rpx 28rpx; border: 1rpx solid #999; border-radius: 12rpx;
        background: #fff; font-size: 28rpx; }
+.tab.small { padding: 6rpx 20rpx; font-size: 26rpx; }
 .tab.active { background: #2c3e50; color: #fff; border-color: #2c3e50; }
+.tabs.diff .hint { margin: 0; }
 
-.tiles { display: flex; flex-wrap: wrap; gap: 8rpx; }
+.tiles { display: flex; flex-wrap: wrap; gap: 8rpx; margin: 6rpx 0; }
 .tile { display: flex; justify-content: center; align-items: center;
         width: 84rpx; height: 116rpx; box-sizing: border-box;
         border: 1rpx solid #b8b2a6; border-radius: 12rpx;

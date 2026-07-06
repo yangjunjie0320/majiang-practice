@@ -230,6 +230,18 @@ const Majiang = (() => {
 
   // ---- 出题（逆向法：从完整胡牌出发构造题目）----
 
+  // 难度分档：按答案数量（能胡几张 / 几种下叫打法）划定范围，
+  // 依据 400 题抽样分布，各档占比 15%-45%。
+  const DIFFICULTY = {
+    ting: { easy: [1, 2], normal: [3, 3], hard: [4, Infinity] },
+    discard: { easy: [1, 2], normal: [3, 4], hard: [5, Infinity] },
+  };
+
+  function inRange(n, mode, difficulty) {
+    const r = DIFFICULTY[mode][difficulty];
+    return n >= r[0] && n <= r[1];
+  }
+
   function randInt(rng, n) {
     return Math.floor(rng() * n);
   }
@@ -303,8 +315,9 @@ const Majiang = (() => {
     return result;
   }
 
-  // 已下叫题：枚举去掉一张的所有方式，取听牌数最多（最难）的一种。
-  function makeTingProblem(rng = Math.random) {
+  // 已下叫题：枚举去掉一张的所有方式。指定难度时按答案数分档筛选，
+  // 否则取听牌数最多（最难）的一种。
+  function makeTingProblem(rng = Math.random, difficulty = null) {
     for (;;) {
       const counts = randomCompleteHand(rng);
       if (counts === null || !isWin(counts)) continue;
@@ -316,9 +329,15 @@ const Majiang = (() => {
         counts[removed] += 1;
         if (tiles.length > 0) variants.push({ removed, tiles });
       }
-      if (variants.length === 0) continue;
-      const most = Math.max(...variants.map((v) => v.tiles.length));
-      const pick = choice(rng, variants.filter((v) => v.tiles.length === most));
+      let pool;
+      if (difficulty) {
+        pool = variants.filter((v) => inRange(v.tiles.length, "ting", difficulty));
+      } else {
+        const most = Math.max(0, ...variants.map((v) => v.tiles.length));
+        pool = variants.filter((v) => v.tiles.length === most);
+      }
+      if (pool.length === 0) continue;
+      const pick = choice(rng, pool);
       counts[pick.removed] -= 1;
 
       const handSuits = [...new Set(
@@ -354,9 +373,9 @@ const Majiang = (() => {
     return options;
   }
 
-  // 未下叫题：胡牌随机去一张，枚举补一张的所有可能，
-  // 取能下叫的打法最多（选择最多、最难）的一种。
-  function makeDiscardProblem(rng = Math.random) {
+  // 未下叫题：胡牌随机去一张，枚举补一张的所有可能。指定难度时按
+  // 答案数分档筛选，否则取能下叫的打法最多（选择最多、最难）的一种。
+  function makeDiscardProblem(rng = Math.random, difficulty = null) {
     for (;;) {
       const kept = sampleTwoSuits(rng);
       const missingSuit = SUITS[[0, 1, 2].find((s) => !kept.includes(s))];
@@ -364,8 +383,7 @@ const Majiang = (() => {
       if (counts === null || !isWin(counts)) continue;
       counts[tileIndex(choice(rng, tilesFromCounts(counts)))] -= 1;
 
-      let variants = [];
-      let most = 0;
+      const variants = [];
       for (const s of kept) {
         for (let r = 0; r < 9; r++) {
           const i = s * 9 + r;
@@ -373,16 +391,20 @@ const Majiang = (() => {
           counts[i] += 1;
           if (!isWin(counts)) {
             const options = tingOptions(counts, missingSuit);
-            if (options.length > 0 && options.length >= most) {
-              if (options.length > most) { most = options.length; variants = []; }
-              variants.push({ add: i, options });
-            }
+            if (options.length > 0) variants.push({ add: i, options });
           }
           counts[i] -= 1;
         }
       }
-      if (variants.length === 0) continue;
-      const pick = choice(rng, variants);
+      let pool;
+      if (difficulty) {
+        pool = variants.filter((v) => inRange(v.options.length, "discard", difficulty));
+      } else {
+        const most = Math.max(0, ...variants.map((v) => v.options.length));
+        pool = variants.filter((v) => v.options.length === most);
+      }
+      if (pool.length === 0) continue;
+      const pick = choice(rng, pool);
       counts[pick.add] += 1;
       pick.options.sort((a, b) => b.count - a.count);
       return {

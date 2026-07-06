@@ -22,38 +22,51 @@ HARNESS = """
   inst.data = JSON.parse(JSON.stringify(cfg.data));
   inst.setData = function (patch) {
     for (const [k, v] of Object.entries(patch)) {
-      const m = k.match(/^(\\w+)\\[(\\d+)\\]\\.(\\w+)$/);
-      if (m) this.data[m[1]][Number(m[2])][m[3]] = v;
+      const m2 = k.match(/^(\\w+)\\[(\\d+)\\]\\[(\\d+)\\]\\.(\\w+)$/);
+      const m1 = k.match(/^(\\w+)\\[(\\d+)\\]\\.(\\w+)$/);
+      if (m2) this.data[m2[1]][Number(m2[2])][Number(m2[3])][m2[4]] = v;
+      else if (m1) this.data[m1[1]][Number(m1[2])][m1[3]] = v;
       else this.data[k] = v;
     }
   };
+  const flat = (rows) => [].concat(...rows);
 
   // 已下叫模式：全选正确答案应判对
   inst.onLoad();
-  check("ting 手牌 13", inst.data.hand.length === 13);
-  check("ting 有候选", inst.data.candidates.length >= 9);
+  check("ting 手牌 13", flat(inst.data.handRows).length === 13);
+  check("ting 有候选", flat(inst.data.candidateRows).length >= 9);
+  check("ting 花色分行", inst.data.handRows.every(
+    (row) => row.every((c) => c.suit === row[0].suit)));
   const correct = new Set(inst.problem.answer.hu_tiles.map((h) => h.tile));
-  inst.data.candidates.forEach((c) => { c.sel = correct.has(c.tile); });
+  flat(inst.data.candidateRows).forEach((c) => { c.sel = correct.has(c.tile); });
   inst.submit();
   check("ting 判定正确", inst.data.verdictOk === true);
   check("ting 结果行数", inst.data.tingRows.length === correct.size);
-  check("ting 标注 good", inst.data.candidates.filter((c) => c.mark === "good").length === correct.size);
+  check("ting 标注 good", flat(inst.data.candidateRows)
+    .filter((c) => c.mark === "good").length === correct.size);
 
   // 未下叫模式：打最优牌应判对
   inst.setData({ mode: "discard" });
   inst.newProblem();
-  check("discard 手牌 14", inst.data.hand.length === 14);
+  check("discard 手牌 14", flat(inst.data.handRows).length === 14);
   check("discard 定缺名", ["万", "条", "筒"].includes(inst.data.missingName));
   const bestTile = inst.problem.answer.best[0];
-  const idx = inst.data.hand.findIndex((h) => h.tile === bestTile);
-  inst.discardTap({ currentTarget: { dataset: { i: idx } } });
+  let pos = null;
+  inst.data.handRows.forEach((row, r) => row.forEach((c, i) => {
+    if (pos === null && c.tile === bestTile) pos = { r, i };
+  }));
+  inst.discardTap({ currentTarget: { dataset: pos } });
   check("discard 判定正确", inst.data.verdictOk === true);
   check("discard 结果非空", inst.data.discardRows.length > 0);
 
-  // 防误点：换到新题后选牌未提交点下一题应先判定
+  // 切换难度应出新题且不报错
+  inst.setDifficulty({ currentTarget: { dataset: { diff: "hard" } } });
+  check("难度切换", inst.data.difficulty === "hard" && inst.data.answered === false);
+
+  // 防误点：选牌未提交点下一题应先判定
   inst.setData({ mode: "ting" });
   inst.newProblem();
-  inst.data.candidates[0].sel = true;
+  inst.data.candidateRows[0][0].sel = true;
   inst.next();
   check("next 先判定", inst.data.answered === true);
 

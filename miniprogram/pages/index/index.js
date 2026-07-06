@@ -12,11 +12,22 @@ function deco(tile) {
   };
 }
 
+// 两个花色分成两行
+function rowsBySuit(tiles) {
+  const rows = [];
+  for (const s of "msp") {
+    const row = tiles.filter((t) => t[1] === s).map(deco);
+    if (row.length > 0) rows.push(row);
+  }
+  return rows;
+}
+
 Page({
   data: {
     mode: "ting",
-    hand: [],
-    candidates: [],
+    difficulty: "normal",
+    handRows: [],
+    candidateRows: [],
     missingName: "",
     answered: false,
     verdict: "",
@@ -35,13 +46,20 @@ Page({
     this.newProblem();
   },
 
+  setDifficulty(e) {
+    this.setData({ difficulty: e.currentTarget.dataset.diff });
+    this.newProblem();
+  },
+
   newProblem() {
-    const mode = this.data.mode;
-    const p = mode === "ting" ? Majiang.makeTingProblem() : Majiang.makeDiscardProblem();
+    const { mode, difficulty } = this.data;
+    const p = mode === "ting"
+      ? Majiang.makeTingProblem(Math.random, difficulty)
+      : Majiang.makeDiscardProblem(Math.random, difficulty);
     this.problem = p;
     this.setData({
-      hand: p.hand.map(deco),
-      candidates: mode === "ting" ? p.candidates.map(deco) : [],
+      handRows: rowsBySuit(p.hand),
+      candidateRows: mode === "ting" ? rowsBySuit(p.candidates) : [],
       missingName: mode === "discard" ? Majiang.SUIT_NAMES[p.missing_suit] : "",
       answered: false,
       verdict: "",
@@ -54,26 +72,31 @@ Page({
 
   toggleTile(e) {
     if (this.data.answered) return;
-    const i = e.currentTarget.dataset.i;
-    this.setData({ [`candidates[${i}].sel`]: !this.data.candidates[i].sel });
+    const { r, i } = e.currentTarget.dataset;
+    this.setData({
+      [`candidateRows[${r}][${i}].sel`]: !this.data.candidateRows[r][i].sel,
+    });
   },
 
   submit() {
     if (this.data.answered || this.data.mode !== "ting") return;
     const answer = this.problem.answer.hu_tiles;
     const correct = new Set(answer.map((h) => h.tile));
-    const chosen = new Set(this.data.candidates.filter((c) => c.sel).map((c) => c.tile));
+    const flat = [].concat(...this.data.candidateRows);
+    const chosen = new Set(flat.filter((c) => c.sel).map((c) => c.tile));
     const ok = correct.size === chosen.size && [...correct].every((t) => chosen.has(t));
-    const candidates = this.data.candidates.map((c) => {
-      let mark = "";
-      if (correct.has(c.tile) && chosen.has(c.tile)) mark = "good";
-      else if (!correct.has(c.tile) && chosen.has(c.tile)) mark = "bad";
-      else if (correct.has(c.tile)) mark = "missed";
-      return { ...c, mark };
-    });
+    const candidateRows = this.data.candidateRows.map((row) =>
+      row.map((c) => {
+        let mark = "";
+        if (correct.has(c.tile) && chosen.has(c.tile)) mark = "good";
+        else if (!correct.has(c.tile) && chosen.has(c.tile)) mark = "bad";
+        else if (correct.has(c.tile)) mark = "missed";
+        return { ...c, mark };
+      })
+    );
     this.setData({
       answered: true,
-      candidates,
+      candidateRows,
       verdict: ok ? "正确！" : "不对，看看漏了或多选了哪些。",
       verdictOk: ok,
       tingRows: answer.map((h) => ({
@@ -87,7 +110,8 @@ Page({
 
   discardTap(e) {
     if (this.data.answered || this.data.mode !== "discard") return;
-    const tile = this.data.hand[e.currentTarget.dataset.i].tile;
+    const { r, i } = e.currentTarget.dataset;
+    const tile = this.data.handRows[r][i].tile;
     const best = new Set(this.problem.answer.best);
     const ok = best.has(tile);
     this.setData({
@@ -109,7 +133,7 @@ Page({
   next() {
     // 选了牌却没提交就点下一题：先判定，避免误以为没有反馈
     if (!this.data.answered && this.data.mode === "ting"
-        && this.data.candidates.some((c) => c.sel)) {
+        && this.data.candidateRows.some((row) => row.some((c) => c.sel))) {
       this.submit();
       return;
     }
