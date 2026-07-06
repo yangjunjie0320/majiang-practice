@@ -1,0 +1,9 @@
+{
+  "appid": "touristappid",
+  "compileType": "miniprogram",
+  "projectname": "majiang-practice",
+  "setting": {
+    "es6": true,
+    "urlCheck": false
+  }
+}

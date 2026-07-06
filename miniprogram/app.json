@@ -1,0 +1,10 @@
+{
+  "pages": ["pages/index/index"],
+  "window": {
+    "navigationBarTitleText": "川麻练习",
+    "navigationBarBackgroundColor": "#2c3e50",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f7f7f2"
+  },
+  "sitemapLocation": "sitemap.json"
+}

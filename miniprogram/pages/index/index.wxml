@@ -1,0 +1,53 @@
+<view class="page">
+  <view class="tabs">
+    <view class="tab {{mode == 'ting' ? 'active' : ''}}" data-mode="ting" bindtap="switchMode">已下叫：胡哪些牌</view>
+    <view class="tab {{mode == 'discard' ? 'active' : ''}}" data-mode="discard" bindtap="switchMode">未下叫：打哪张</view>
+  </view>
+
+  <block wx:if="{{mode == 'ting'}}">
+    <view class="hint">手牌（已下叫）：</view>
+    <view class="tiles">
+      <view wx:for="{{hand}}" wx:key="index" class="tile {{item.suit}}">{{item.text}}</view>
+    </view>
+    <view class="hint">点选所有能胡的牌，然后提交：</view>
+    <view class="tiles">
+      <view wx:for="{{candidates}}" wx:key="index" data-i="{{index}}" bindtap="toggleTile"
+            class="tile {{item.suit}} {{item.sel ? 'selected' : ''}} {{item.mark}}">{{item.text}}</view>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view class="hint">定缺<text class="bold">{{missingName}}</text>，摸牌后 14 张。点击打出一张，使手牌下叫：</view>
+    <view class="tiles">
+      <view wx:for="{{hand}}" wx:key="index" data-i="{{index}}" bindtap="discardTap"
+            class="tile {{item.suit}}">{{item.text}}</view>
+    </view>
+  </block>
+
+  <view class="actions">
+    <view class="btn primary" wx:if="{{mode == 'ting'}}" bindtap="submit">提交</view>
+    <view class="btn" bindtap="next">下一题</view>
+  </view>
+
+  <view class="verdict {{verdictOk ? 'ok' : 'no'}}">{{verdict}}</view>
+
+  <view wx:if="{{tingRows.length > 0}}" class="table">
+    <view class="tr th">
+      <view class="td">胡牌</view><view class="td">倍数</view><view class="td wide">番型</view>
+    </view>
+    <view wx:for="{{tingRows}}" wx:key="index" class="tr">
+      <view class="td">{{item.text}}</view><view class="td">{{item.fan}} 倍</view><view class="td wide">{{item.patterns}}</view>
+    </view>
+  </view>
+
+  <view wx:if="{{discardRows.length > 0}}" class="table">
+    <view class="tr th">
+      <view class="td">下叫打法</view><view class="td wide">听牌</view><view class="td">枚数</view>
+    </view>
+    <view wx:for="{{discardRows}}" wx:key="index" class="tr best">
+      <view class="td">打 {{item.text}}</view><view class="td wide">{{item.waits}}</view><view class="td">{{item.count}} 枚</view>
+    </view>
+  </view>
+
+  <view class="hint" wx:if="{{footnote}}">{{footnote}}</view>
+</view>
