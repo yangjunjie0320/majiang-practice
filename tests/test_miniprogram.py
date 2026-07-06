@@ -33,9 +33,9 @@ HARNESS = """
 
   // 已下叫模式：全选正确答案应判对
   inst.onLoad();
-  check("ting 手牌 13", flat(inst.data.handRows).length === 13);
+  check("ting 手牌 13", inst.data.hand.length === 13);
   check("ting 有候选", flat(inst.data.candidateRows).length >= 9);
-  check("ting 花色分行", inst.data.handRows.every(
+  check("候选牌花色分行", inst.data.candidateRows.every(
     (row) => row.every((c) => c.suit === row[0].suit)));
   const correct = new Set(inst.problem.answer.hu_tiles.map((h) => h.tile));
   flat(inst.data.candidateRows).forEach((c) => { c.sel = correct.has(c.tile); });
@@ -48,14 +48,11 @@ HARNESS = """
   // 未下叫模式：打最优牌应判对
   inst.setData({ mode: "discard" });
   inst.newProblem();
-  check("discard 手牌 14", flat(inst.data.handRows).length === 14);
+  check("discard 手牌 14", inst.data.hand.length === 14);
   check("discard 定缺名", ["万", "条", "筒"].includes(inst.data.missingName));
   const bestTile = inst.problem.answer.best[0];
-  let pos = null;
-  inst.data.handRows.forEach((row, r) => row.forEach((c, i) => {
-    if (pos === null && c.tile === bestTile) pos = { r, i };
-  }));
-  inst.discardTap({ currentTarget: { dataset: pos } });
+  const idx = inst.data.hand.findIndex((c) => c.tile === bestTile);
+  inst.discardTap({ currentTarget: { dataset: { i: idx } } });
   check("discard 判定正确", inst.data.verdictOk === true);
   check("discard 结果非空", inst.data.discardRows.length > 0);
 

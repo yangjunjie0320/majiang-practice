@@ -26,7 +26,7 @@ Page({
   data: {
     mode: "ting",
     difficulty: "normal",
-    handRows: [],
+    hand: [],
     candidateRows: [],
     missingName: "",
     answered: false,
@@ -58,7 +58,7 @@ Page({
       : Majiang.makeDiscardProblem(Math.random, difficulty);
     this.problem = p;
     this.setData({
-      handRows: rowsBySuit(p.hand),
+      hand: p.hand.map(deco),
       candidateRows: mode === "ting" ? rowsBySuit(p.candidates) : [],
       missingName: mode === "discard" ? Majiang.SUIT_NAMES[p.missing_suit] : "",
       answered: false,
@@ -110,8 +110,7 @@ Page({
 
   discardTap(e) {
     if (this.data.answered || this.data.mode !== "discard") return;
-    const { r, i } = e.currentTarget.dataset;
-    const tile = this.data.handRows[r][i].tile;
+    const tile = this.data.hand[e.currentTarget.dataset.i].tile;
     const best = new Set(this.problem.answer.best);
     const ok = best.has(tile);
     this.setData({

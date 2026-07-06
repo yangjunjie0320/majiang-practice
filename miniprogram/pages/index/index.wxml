@@ -12,8 +12,8 @@
 
   <block wx:if="{{mode == 'ting'}}">
     <view class="hint">手牌（已下叫）：</view>
-    <view wx:for="{{handRows}}" wx:for-item="row" wx:for-index="r" wx:key="r" class="tiles">
-      <view wx:for="{{row}}" wx:key="index" class="tile">
+    <view class="tiles">
+      <view wx:for="{{hand}}" wx:key="index" class="tile">
         <image class="face" src="{{item.src}}" mode="aspectFit"/>
       </view>
     </view>
@@ -28,8 +28,8 @@
 
   <block wx:else>
     <view class="hint">定缺<text class="bold">{{missingName}}</text>，摸牌后 14 张。点击打出一张，使手牌下叫：</view>
-    <view wx:for="{{handRows}}" wx:for-item="row" wx:for-index="r" wx:key="r" class="tiles">
-      <view wx:for="{{row}}" wx:key="index" data-r="{{r}}" data-i="{{index}}" bindtap="discardTap" class="tile">
+    <view class="tiles">
+      <view wx:for="{{hand}}" wx:key="index" data-i="{{index}}" bindtap="discardTap" class="tile">
         <image class="face" src="{{item.src}}" mode="aspectFit"/>
       </view>
     </view>

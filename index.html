@@ -114,7 +114,9 @@ function render() {
   box.innerHTML = "";
   if (mode === "ting") {
     box.insertAdjacentHTML("beforeend", '<p class="hint">手牌（已下叫）：</p>');
-    box.appendChild(tileRows(problem.hand, t => tileSpan(t)));
+    const handDiv = document.createElement("div");
+    problem.hand.forEach(t => handDiv.appendChild(tileSpan(t)));
+    box.appendChild(handDiv);
     box.insertAdjacentHTML("beforeend", '<p class="hint">点选所有能胡的牌，然后提交：</p>');
     const cand = tileRows(problem.candidates, t => {
       const b = tileSpan(t, "button");
@@ -128,11 +130,13 @@ function render() {
   } else {
     box.insertAdjacentHTML("beforeend",
       `<p class="hint">定缺<b>${SUIT_NAMES[problem.missing_suit]}</b>，摸牌后 14 张。点击打出一张，使手牌下叫：</p>`);
-    box.appendChild(tileRows(problem.hand, t => {
+    const handDiv = document.createElement("div");
+    problem.hand.forEach(t => {
       const b = tileSpan(t, "button");
       b.onclick = () => { if (!answered) judgeDiscard(t); };
-      return b;
-    }));
+      handDiv.appendChild(b);
+    });
+    box.appendChild(handDiv);
     $("submit").hidden = true;
   }
 }
