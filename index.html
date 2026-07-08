@@ -40,6 +40,14 @@
   tr.chosen td:first-child::after { content: " ←你打的"; color: #666; font-size: 0.85em; }
   #verdict { font-weight: bold; margin: 10px 0; }
   #verdict.ok { color: #1e8449; } #verdict.no { color: #c0392b; }
+  #settle input { font-size: 1em; width: 90px; padding: 4px 8px; margin: 2px 0;
+                  border: 1px solid #999; border-radius: 6px; }
+  .s-row { margin: 4px 0; }
+  .s-row label { display: inline-block; width: 5em; color: #444; }
+  #s-check { font-weight: bold; margin: 10px 0; }
+  #s-check.ok { color: #1e8449; } #s-check.no { color: #c0392b; }
+  td.recv { color: #1e8449; font-weight: bold; }
+  td.pay { color: #c0392b; font-weight: bold; }
 </style>
 </head>
 <body>
@@ -47,6 +55,7 @@
 <div class="tabs">
   <button id="tab-ting" class="active">听牌练习</button>
   <button id="tab-discard">下叫练习</button>
+  <button id="tab-settle">结账</button>
 </div>
 <div class="tabs diff">
   <span class="hint">难度：</span>
@@ -55,7 +64,17 @@
   <button data-diff="hard">困难</button>
 </div>
 <div id="problem"></div>
-<div class="actions">
+<div id="settle" hidden>
+  <div class="s-row"><label>人数</label><input id="s-count" type="number" min="2" max="8" value="4"></div>
+  <div class="s-row"><label>起始筹码</label><input id="s-init" type="number" value="100"></div>
+  <p class="hint">各家终局筹码：</p>
+  <div id="s-players"></div>
+  <div class="s-row"><label>茶钱筹码</label><input id="s-tea" type="number" value="0"></div>
+  <div class="actions"><button id="s-go">结算</button></div>
+  <div id="s-check"></div>
+  <div id="s-out"></div>
+</div>
+<div class="actions" id="practice-actions">
   <button id="submit" hidden>提交</button>
   <button id="next">下一题</button>
 </div>
@@ -195,6 +214,7 @@ $("next").onclick = () => {
 };
 $("tab-ting").onclick = () => switchMode("ting");
 $("tab-discard").onclick = () => switchMode("discard");
+$("tab-settle").onclick = () => switchMode("settle");
 document.querySelectorAll(".diff button").forEach(b => {
   b.onclick = () => {
     difficulty = b.dataset.diff;
@@ -207,8 +227,73 @@ function switchMode(m) {
   mode = m;
   $("tab-ting").classList.toggle("active", m === "ting");
   $("tab-discard").classList.toggle("active", m === "discard");
-  loadProblem();
+  $("tab-settle").classList.toggle("active", m === "settle");
+  const isSettle = m === "settle";
+  $("problem").hidden = isSettle;
+  $("practice-actions").hidden = isSettle;
+  document.querySelector(".tabs.diff").hidden = isSettle;
+  $("settle").hidden = !isSettle;
+  $("verdict").textContent = "";
+  $("result").innerHTML = "";
+  if (!isSettle) loadProblem();
 }
+
+// ---- 结账 ----
+function money(x) { return String(Math.round(x * 100) / 100); }
+
+// 人数变化时重建筹码输入行，保留已填的值
+function buildPlayerRows(n) {
+  const box = $("s-players");
+  const old = [...box.querySelectorAll("input")].map(i => i.value);
+  box.innerHTML = "";
+  for (let i = 0; i < n; i++) {
+    const row = document.createElement("div");
+    row.className = "s-row";
+    row.innerHTML = `<label>玩家${i + 1}</label><input class="s-chip" type="number">`;
+    row.querySelector("input").value = old[i] !== undefined ? old[i] : "";
+    box.appendChild(row);
+  }
+}
+$("s-count").oninput = () => {
+  const n = Number($("s-count").value);
+  if (n >= 2 && n <= 8) buildPlayerRows(n);
+};
+buildPlayerRows(4);
+
+$("s-go").onclick = () => {
+  const init = Number($("s-init").value);
+  const tea = Number($("s-tea").value);
+  const chips = [...document.querySelectorAll("#s-players input")]
+    .map(i => i.value.trim() === "" ? NaN : Number(i.value));
+  const check = $("s-check");
+  if (!isFinite(init) || !isFinite(tea) || chips.some(c => !isFinite(c))) {
+    check.textContent = "请把所有数字填完整。";
+    check.className = "no";
+    $("s-out").innerHTML = "";
+    return;
+  }
+  const n = chips.length;
+  const r = Majiang.settle(init, chips, tea);
+  if (r.diff === 0) {
+    check.textContent = `对账正确：${n} 家筹码 + 茶钱 = ${init * n}。`;
+    check.className = "ok";
+  } else {
+    const total = chips.reduce((a, b) => a + b, 0) + tea;
+    check.textContent = `对不上：${n} 家筹码 + 茶钱 = ${total}，` +
+      `应为 ${n} × ${init} = ${init * n}，差 ${money(Math.abs(r.diff))}，请核对。`;
+    check.className = "no";
+  }
+  const rows = chips.map((c, i) => {
+    const d = Math.round(r.deltas[i] * 100) / 100;
+    const cls = d > 0 ? "recv" : d < 0 ? "pay" : "";
+    const txt = d > 0 ? `收 ${money(d)} 元` : d < 0 ? `付 ${money(-d)} 元` : "不输不赢";
+    return `<tr><td>玩家${i + 1}</td><td>${c}</td><td class="${cls}">${txt}</td></tr>`;
+  }).join("");
+  $("s-out").innerHTML =
+    `<table><tr><th>玩家</th><th>终局筹码</th><th>输赢</th></tr>${rows}</table>
+     <p class="hint">茶钱已按人数平分补回（每人 +${money(r.share)}）；茶钱现金另行结算。</p>`;
+};
+
 loadProblem();
 </script>
 </body>

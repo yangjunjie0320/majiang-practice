@@ -416,12 +416,22 @@ const Majiang = (() => {
     }
   }
 
+  // 结账：局中赢家按比例交的茶钱筹码只记比例，真实茶钱现金另结。
+  // 结算时把茶钱按人数平分补回每人：输赢 = 筹码 + 茶钱/人数 − 起始。
+  // 对账（diff===0，即 Σ筹码+茶钱 = 人数×起始）通过时输赢之和恰为 0。
+  function settle(initial, chips, tea) {
+    const share = tea / chips.length;
+    const deltas = chips.map((c) => c + share - initial);
+    const diff = chips.reduce((a, b) => a + b, 0) + tea - initial * chips.length;
+    return { share, deltas, diff };
+  }
+
   return {
     SUITS, SUIT_NAMES,
     tileIndex, indexToTile, formatTile,
     countsFromTiles, tilesFromCounts, sortTiles, suitsIn,
     isWin, fan, shanten, ukeire,
-    makeTingProblem, makeDiscardProblem,
+    makeTingProblem, makeDiscardProblem, settle,
   };
 })();
 

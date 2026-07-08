@@ -67,6 +67,25 @@ HARNESS = """
   inst.next();
   check("next 先判定", inst.data.answered === true);
 
+  // 结账模式：填数结算应出正确结果
+  inst.switchMode({ currentTarget: { dataset: { mode: "settle" } } });
+  check("settle 模式", inst.data.mode === "settle");
+  inst.sInitInput({ detail: { value: "100" } });
+  ["140", "90", "85", "65"].forEach((v, i) =>
+    inst.sChipInput({ currentTarget: { dataset: { i } }, detail: { value: v } }));
+  inst.sTeaInput({ detail: { value: "20" } });
+  inst.doSettle();
+  check("settle 行数", inst.data.sRows.length === 4);
+  check("settle 对账平", inst.data.sBalanced === true);
+  check("settle 甲收45", inst.data.sRows[0].text === "收 45 元");
+  check("settle 丁付30", inst.data.sRows[3].text === "付 30 元");
+  inst.sChipInput({ currentTarget: { dataset: { i: 0 } }, detail: { value: "130" } });
+  inst.doSettle();
+  check("settle 对账差", inst.data.sBalanced === false
+    && inst.data.sCheck.includes("差 10"));
+  inst.sCountInput({ detail: { value: "3" } });
+  check("settle 人数改3", inst.data.sChips.length === 3);
+
   return fails;
 }
 """

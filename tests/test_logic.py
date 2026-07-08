@@ -124,6 +124,16 @@ CHECKS = """
     }
   }
 
+  // ---- 结账：输赢 = 筹码 + 茶钱/人数 − 起始，对账 = Σ筹码+茶钱−人数×起始 ----
+  const st = M.settle(100, [140, 90, 85, 65], 20);
+  check("settle 平分茶钱", st.share === 5);
+  check("settle 输赢", JSON.stringify(st.deltas) === JSON.stringify([45, -5, -10, -30]));
+  check("settle 对账平", st.diff === 0);
+  check("settle 和为零", st.deltas.reduce((a, b) => a + b, 0) === 0);
+  check("settle 对账差", M.settle(100, [100, 100, 100, 90], 0).diff === -10);
+  check("settle 三人", JSON.stringify(M.settle(50, [80, 20, 50], 0).deltas)
+    === JSON.stringify([30, -30, 0]));
+
   return fails;
 }
 """

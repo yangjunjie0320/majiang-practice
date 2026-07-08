@@ -2,8 +2,9 @@
   <view class="tabs">
     <view class="tab {{mode == 'ting' ? 'active' : ''}}" data-mode="ting" bindtap="switchMode">听牌练习</view>
     <view class="tab {{mode == 'discard' ? 'active' : ''}}" data-mode="discard" bindtap="switchMode">下叫练习</view>
+    <view class="tab {{mode == 'settle' ? 'active' : ''}}" data-mode="settle" bindtap="switchMode">结账</view>
   </view>
-  <view class="tabs diff">
+  <view class="tabs diff" wx:if="{{mode != 'settle'}}">
     <view class="hint">难度：</view>
     <view class="tab small {{difficulty == 'easy' ? 'active' : ''}}" data-diff="easy" bindtap="setDifficulty">简单</view>
     <view class="tab small {{difficulty == 'normal' ? 'active' : ''}}" data-diff="normal" bindtap="setDifficulty">普通</view>
@@ -26,7 +27,7 @@
     </view>
   </block>
 
-  <block wx:else>
+  <block wx:elif="{{mode == 'discard'}}">
     <view class="hint">定缺<text class="bold">{{missingName}}</text>，摸牌后 14 张。点击打出一张，使手牌下叫：</view>
     <view class="tiles">
       <view wx:for="{{hand}}" wx:key="index" data-i="{{index}}" bindtap="discardTap" class="tile">
@@ -35,7 +36,35 @@
     </view>
   </block>
 
-  <view class="actions">
+  <block wx:else>
+    <view class="s-row"><text class="s-label">人数</text>
+      <input class="num" type="number" value="{{sCount}}" bindinput="sCountInput"/></view>
+    <view class="s-row"><text class="s-label">起始筹码</text>
+      <input class="num" type="number" value="{{sInit}}" bindinput="sInitInput"/></view>
+    <view class="hint">各家终局筹码：</view>
+    <view class="s-row" wx:for="{{sChips}}" wx:key="index">
+      <text class="s-label">玩家{{index + 1}}</text>
+      <input class="num" type="number" value="{{item}}" data-i="{{index}}" bindinput="sChipInput"/>
+    </view>
+    <view class="s-row"><text class="s-label">茶钱筹码</text>
+      <input class="num" type="number" value="{{sTea}}" bindinput="sTeaInput"/></view>
+    <view class="actions">
+      <view class="btn primary" bindtap="doSettle">结算</view>
+    </view>
+    <view class="verdict {{sBalanced ? 'ok' : 'no'}}">{{sCheck}}</view>
+    <view wx:if="{{sRows.length > 0}}" class="table">
+      <view class="tr th">
+        <view class="td">玩家</view><view class="td">终局筹码</view><view class="td wide">输赢</view>
+      </view>
+      <view wx:for="{{sRows}}" wx:key="index" class="tr">
+        <view class="td">{{item.name}}</view><view class="td">{{item.chips}}</view>
+        <view class="td wide {{item.cls}}">{{item.text}}</view>
+      </view>
+    </view>
+    <view class="hint" wx:if="{{sRows.length > 0}}">茶钱已按人数平分补回（每人 +{{sShare}}）；茶钱现金另行结算。</view>
+  </block>
+
+  <view class="actions" wx:if="{{mode != 'settle'}}">
     <view class="btn primary" wx:if="{{mode == 'ting'}}" bindtap="submit">提交</view>
     <view class="btn" bindtap="next">下一题</view>
   </view>

@@ -35,6 +35,14 @@ Page({
     tingRows: [],
     discardRows: [],
     footnote: "",
+    sCount: "4",
+    sInit: "100",
+    sChips: ["", "", "", ""],
+    sTea: "0",
+    sShare: "0",
+    sRows: [],
+    sCheck: "",
+    sBalanced: true,
   },
 
   onLoad() {
@@ -42,8 +50,9 @@ Page({
   },
 
   switchMode(e) {
-    this.setData({ mode: e.currentTarget.dataset.mode });
-    this.newProblem();
+    const mode = e.currentTarget.dataset.mode;
+    this.setData({ mode });
+    if (mode !== "settle") this.newProblem();
   },
 
   setDifficulty(e) {
@@ -137,5 +146,64 @@ Page({
       return;
     }
     this.newProblem();
+  },
+
+  // ---- 结账 ----
+  sCountInput(e) {
+    const n = Number(e.detail.value);
+    const patch = { sCount: e.detail.value };
+    if (n >= 2 && n <= 8) {
+      // 人数变化时重建筹码数组，保留已填的值
+      const chips = [];
+      for (let i = 0; i < n; i++) chips.push(this.data.sChips[i] || "");
+      patch.sChips = chips;
+    }
+    this.setData(patch);
+  },
+
+  sInitInput(e) {
+    this.setData({ sInit: e.detail.value });
+  },
+
+  sTeaInput(e) {
+    this.setData({ sTea: e.detail.value });
+  },
+
+  sChipInput(e) {
+    const chips = this.data.sChips.slice();
+    chips[e.currentTarget.dataset.i] = e.detail.value;
+    this.setData({ sChips: chips });
+  },
+
+  doSettle() {
+    const money = (x) => String(Math.round(x * 100) / 100);
+    const init = Number(this.data.sInit);
+    const tea = Number(this.data.sTea);
+    const chips = this.data.sChips.map((v) =>
+      String(v).trim() === "" ? NaN : Number(v));
+    if (!isFinite(init) || !isFinite(tea) || chips.some((c) => !isFinite(c))) {
+      this.setData({ sCheck: "请把所有数字填完整。", sBalanced: false, sRows: [] });
+      return;
+    }
+    const n = chips.length;
+    const r = Majiang.settle(init, chips, tea);
+    const total = chips.reduce((a, b) => a + b, 0) + tea;
+    this.setData({
+      sBalanced: r.diff === 0,
+      sCheck: r.diff === 0
+        ? `对账正确：${n} 家筹码 + 茶钱 = ${init * n}。`
+        : `对不上：${n} 家筹码 + 茶钱 = ${total}，应为 ${n} × ${init} = ${init * n}，` +
+          `差 ${money(Math.abs(r.diff))}，请核对。`,
+      sShare: money(r.share),
+      sRows: chips.map((c, i) => {
+        const d = Math.round(r.deltas[i] * 100) / 100;
+        return {
+          name: `玩家${i + 1}`,
+          chips: c,
+          cls: d > 0 ? "recv" : d < 0 ? "pay" : "",
+          text: d > 0 ? `收 ${money(d)} 元` : d < 0 ? `付 ${money(-d)} 元` : "不输不赢",
+        };
+      }),
+    });
   },
 });

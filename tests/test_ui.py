@@ -48,3 +48,33 @@ def test_discard_flow(app_page):
     verdict = page.locator("#verdict").inner_text()
     assert "下叫" in verdict
     assert page.locator("#result tr").count() >= 2
+
+
+def test_settle_flow(app_page):
+    page = app_page
+    page.locator("#tab-settle").click()
+    assert page.locator("#settle").is_visible()
+    assert not page.locator("#problem").is_visible()
+    assert page.locator("#s-players input").count() == 4
+
+    for i, v in enumerate(["140", "90", "85", "65"]):
+        page.locator("#s-players input").nth(i).fill(v)
+    page.locator("#s-tea").fill("20")
+    page.locator("#s-go").click()
+    assert "对账正确" in page.locator("#s-check").inner_text()
+    out = page.locator("#s-out").inner_text()
+    assert "收 45 元" in out and "付 30 元" in out and "付 5 元" in out
+
+    # 数错筹码应提示差额
+    page.locator("#s-players input").nth(0).fill("130")
+    page.locator("#s-go").click()
+    assert "差 10" in page.locator("#s-check").inner_text()
+
+    # 人数改 3 应重建输入行
+    page.locator("#s-count").fill("3")
+    assert page.locator("#s-players input").count() == 3
+
+    # 切回练习页应恢复出题
+    page.locator("#tab-ting").click()
+    page.wait_for_selector("#candidates button")
+    assert not page.locator("#settle").is_visible()
