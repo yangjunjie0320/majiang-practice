@@ -28,6 +28,7 @@ Page({
     difficulty: "normal",
     hand: [],
     candidateRows: [],
+    picks: [],
     missingName: "",
     answered: false,
     verdict: "",
@@ -70,6 +71,7 @@ Page({
       hand: p.hand.map(deco),
       candidateRows: mode === "ting" ? rowsBySuit(p.candidates) : [],
       missingName: mode === "discard" ? Majiang.SUIT_NAMES[p.missing_suit] : "",
+      picks: [],
       answered: false,
       verdict: "",
       verdictOk: false,
@@ -88,7 +90,12 @@ Page({
   },
 
   submit() {
-    if (this.data.answered || this.data.mode !== "ting") return;
+    if (this.data.answered) return;
+    if (this.data.mode === "ting") this.judgeTing();
+    else if (this.data.mode === "discard") this.judgeDiscard();
+  },
+
+  judgeTing() {
     const answer = this.problem.answer.hu_tiles;
     const correct = new Set(answer.map((h) => h.tile));
     const flat = [].concat(...this.data.candidateRows);
@@ -117,17 +124,45 @@ Page({
     });
   },
 
+  // 点手牌：把该牌加入/移出下方副本区（同种牌只记一次）
   discardTap(e) {
     if (this.data.answered || this.data.mode !== "discard") return;
-    const tile = this.data.hand[e.currentTarget.dataset.i].tile;
-    const best = new Set(this.problem.answer.best);
-    const ok = best.has(tile);
+    this.togglePick(this.data.hand[e.currentTarget.dataset.i].tile);
+  },
+
+  // 点副本：取消该选择
+  pickTap(e) {
+    if (this.data.answered) return;
+    this.togglePick(this.data.picks[e.currentTarget.dataset.i].tile);
+  },
+
+  togglePick(tile) {
+    let tiles = this.data.picks.map((p) => p.tile);
+    tiles = tiles.includes(tile)
+      ? tiles.filter((t) => t !== tile)
+      : tiles.concat(tile);
+    const sel = new Set(tiles);
+    this.setData({
+      picks: Majiang.sortTiles(tiles).map(deco),
+      hand: this.data.hand.map((h) => ({ ...h, sel: sel.has(h.tile) })),
+    });
+  },
+
+  judgeDiscard() {
+    const correct = new Set(this.problem.answer.best);
+    const chosen = new Set(this.data.picks.map((p) => p.tile));
+    const ok = correct.size === chosen.size && [...correct].every((t) => chosen.has(t));
+    const picks = this.data.picks.map((p) => ({
+      ...p, mark: correct.has(p.tile) ? "good" : "bad",
+    }));
+    // 漏选的补在副本区末尾标黄
+    Majiang.sortTiles([...correct].filter((t) => !chosen.has(t))).forEach((t) => {
+      picks.push({ ...deco(t), mark: "missed" });
+    });
     this.setData({
       answered: true,
-      verdict: ok
-        ? `正确！打 ${Majiang.formatTile(tile)} 即下叫。`
-        : `打 ${Majiang.formatTile(tile)} 不能下叫。能下叫的打法：` +
-          this.problem.answer.best.map(Majiang.formatTile).join(" / "),
+      picks,
+      verdict: ok ? "正确！" : "不对，看看漏了或多选了哪些。",
       verdictOk: ok,
       discardRows: this.problem.answer.detail.map((d) => ({
         text: Majiang.formatTile(d.tile),
@@ -140,8 +175,10 @@ Page({
 
   next() {
     // 选了牌却没提交就点下一题：先判定，避免误以为没有反馈
-    if (!this.data.answered && this.data.mode === "ting"
-        && this.data.candidateRows.some((row) => row.some((c) => c.sel))) {
+    if (!this.data.answered
+        && ((this.data.mode === "ting"
+             && this.data.candidateRows.some((row) => row.some((c) => c.sel)))
+            || (this.data.mode === "discard" && this.data.picks.length > 0))) {
       this.submit();
       return;
     }

@@ -23,10 +23,10 @@
           box-shadow: 0 2px 3px rgba(0,0,0,.18); user-select: none; }
   .tile .face { width: 90%; height: 90%; object-fit: contain; pointer-events: none; }
   button.tile { cursor: pointer; }
-  button.tile.selected { outline: 3px solid #2c3e50; }
-  button.tile.good { background: #d4efdf; border-color: #27ae60; }
-  button.tile.bad { background: #fadbd8; border-color: #c0392b; }
-  button.tile.missed { background: #fcf3cf; border-color: #b7950b; }
+  .tile.selected { outline: 3px solid #2c3e50; }
+  .tile.good { background: #d4efdf; border-color: #27ae60; }
+  .tile.bad { background: #fadbd8; border-color: #c0392b; }
+  .tile.missed { background: #fcf3cf; border-color: #b7950b; }
   .actions { margin: 14px 0; }
   .actions button { font-size: 1em; padding: 8px 20px; cursor: pointer; border-radius: 6px;
                     border: 1px solid #2c3e50; background: #2c3e50; color: #fff; }
@@ -92,6 +92,7 @@ let mode = "ting";
 let difficulty = "normal";
 let problem = null;
 let answered = false;
+let discardPicks = [];
 
 // 两个花色分成两行显示
 function tileRows(tiles, build) {
@@ -119,6 +120,7 @@ function tileSpan(t, tag = "span") {
 
 function loadProblem() {
   answered = false;
+  discardPicks = [];
   $("verdict").textContent = "";
   $("verdict").className = "";
   $("result").innerHTML = "";
@@ -148,16 +150,37 @@ function render() {
     $("submit").disabled = false;
   } else {
     box.insertAdjacentHTML("beforeend",
-      `<p class="hint">定缺<b>${SUIT_NAMES[problem.missing_suit]}</b>，摸牌后 14 张。点击打出一张，使手牌下叫：</p>`);
+      `<p class="hint">定缺<b>${SUIT_NAMES[problem.missing_suit]}</b>，摸牌后 14 张。点选<b>所有</b>打出后能下叫的牌，然后提交：</p>`);
     const handDiv = document.createElement("div");
+    handDiv.id = "hand";
     problem.hand.forEach(t => {
       const b = tileSpan(t, "button");
-      b.onclick = () => { if (!answered) judgeDiscard(t); };
+      b.onclick = () => { if (!answered) toggleDiscard(t); };
       handDiv.appendChild(b);
     });
     box.appendChild(handDiv);
-    $("submit").hidden = true;
+    box.insertAdjacentHTML("beforeend", '<p class="hint">你选的打法（点副本可取消）：</p>');
+    const picks = document.createElement("div");
+    picks.id = "picks";
+    box.appendChild(picks);
+    $("submit").hidden = false;
+    $("submit").disabled = false;
   }
+}
+
+function toggleDiscard(t) {
+  const i = discardPicks.indexOf(t);
+  if (i >= 0) discardPicks.splice(i, 1);
+  else discardPicks.push(t);
+  const box = $("picks");
+  box.innerHTML = "";
+  Majiang.sortTiles(discardPicks.slice()).forEach(x => {
+    const b = tileSpan(x, "button");
+    b.onclick = () => { if (!answered) toggleDiscard(x); };
+    box.appendChild(b);
+  });
+  document.querySelectorAll("#hand .tile").forEach(b =>
+    b.classList.toggle("selected", discardPicks.includes(b.dataset.tile)));
 }
 
 function judgeTing() {
@@ -184,30 +207,46 @@ function judgeTing() {
   v.scrollIntoView({ block: "nearest" });
 }
 
-function judgeDiscard(tile) {
+function judgeDiscard() {
   answered = true;
-  const best = new Set(problem.answer.best);
-  const ok = best.has(tile);
+  $("submit").disabled = true;
+  const correct = new Set(problem.answer.best);
+  const chosen = new Set(discardPicks);
+  const ok = correct.size === chosen.size && [...correct].every(t => chosen.has(t));
+  document.querySelectorAll("#picks .tile").forEach(b => {
+    b.classList.add(correct.has(b.dataset.tile) ? "good" : "bad");
+  });
+  // 漏选的补在副本区末尾标黄
+  Majiang.sortTiles([...correct].filter(t => !chosen.has(t))).forEach(t => {
+    const b = tileSpan(t, "button");
+    b.classList.add("missed");
+    $("picks").appendChild(b);
+  });
   const v = $("verdict");
-  v.textContent = ok ? `正确！打 ${fmt(tile)} 即下叫。`
-                     : `打 ${fmt(tile)} 不能下叫。能下叫的打法：${problem.answer.best.map(fmt).join(" / ")}`;
+  v.textContent = ok ? "正确！" : "不对，看看漏了或多选了哪些。";
   v.className = ok ? "ok" : "no";
-  const rows = problem.answer.detail.map(d => {
-    const cls = [ "best", d.tile === tile ? "chosen" : ""].join(" ");
-    return `<tr class="${cls}"><td>打 ${fmt(d.tile)}</td>` +
-           `<td>${d.waits.map(fmt).join(" ")}</td><td>${d.count} 枚</td></tr>`;
-  }).join("");
+  const rows = problem.answer.detail.map(d =>
+    `<tr class="best"><td>打 ${fmt(d.tile)}</td>` +
+    `<td>${d.waits.map(fmt).join(" ")}</td><td>${d.count} 枚</td></tr>`).join("");
   $("result").innerHTML =
     `<table><tr><th>下叫打法</th><th>听牌</th><th>枚数</th></tr>${rows}</table>
      <p class="hint">枚数按每种剩 4 张减去手中张数估算；打其他牌都不能下叫。</p>`;
   v.scrollIntoView({ block: "nearest" });
 }
 
-$("submit").onclick = () => { if (!answered && mode === "ting") judgeTing(); };
+$("submit").onclick = () => {
+  if (answered) return;
+  if (mode === "ting") judgeTing();
+  else if (mode === "discard") judgeDiscard();
+};
 $("next").onclick = () => {
   // 选了牌却没提交就点下一题：先判定，避免误以为没有反馈
   if (!answered && mode === "ting" && document.querySelector("#candidates .selected")) {
     judgeTing();
+    return;
+  }
+  if (!answered && mode === "discard" && discardPicks.length > 0) {
+    judgeDiscard();
     return;
   }
   loadProblem();

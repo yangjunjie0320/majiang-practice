@@ -45,15 +45,26 @@ HARNESS = """
   check("ting 标注 good", flat(inst.data.candidateRows)
     .filter((c) => c.mark === "good").length === correct.size);
 
-  // 未下叫模式：打最优牌应判对
+  // 未下叫模式：选齐所有下叫打法应判对
   inst.setData({ mode: "discard" });
   inst.newProblem();
   check("discard 手牌 14", inst.data.hand.length === 14);
   check("discard 定缺名", ["万", "条", "筒"].includes(inst.data.missingName));
-  const bestTile = inst.problem.answer.best[0];
-  const idx = inst.data.hand.findIndex((c) => c.tile === bestTile);
-  inst.discardTap({ currentTarget: { dataset: { i: idx } } });
+  const best = inst.problem.answer.best;
+  best.forEach((t) => {
+    const idx = inst.data.hand.findIndex((c) => c.tile === t);
+    inst.discardTap({ currentTarget: { dataset: { i: idx } } });
+  });
+  check("discard 副本数", inst.data.picks.length === best.length);
+  check("discard 手牌高亮", inst.data.hand.some((h) => h.sel));
+  const t0 = inst.data.picks[0].tile;
+  inst.pickTap({ currentTarget: { dataset: { i: 0 } } });
+  check("discard 点副本取消", inst.data.picks.length === best.length - 1);
+  inst.togglePick(t0);
+  check("discard 选回", inst.data.picks.length === best.length);
+  inst.submit();
   check("discard 判定正确", inst.data.verdictOk === true);
+  check("discard 全对标绿", inst.data.picks.every((p) => p.mark === "good"));
   check("discard 结果非空", inst.data.discardRows.length > 0);
 
   // 切换难度应出新题且不报错

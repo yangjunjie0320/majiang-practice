@@ -28,9 +28,17 @@
   </block>
 
   <block wx:elif="{{mode == 'discard'}}">
-    <view class="hint">定缺<text class="bold">{{missingName}}</text>，摸牌后 14 张。点击打出一张，使手牌下叫：</view>
+    <view class="hint">定缺<text class="bold">{{missingName}}</text>，摸牌后 14 张。点选<text class="bold">所有</text>打出后能下叫的牌，然后提交：</view>
     <view class="tiles">
-      <view wx:for="{{hand}}" wx:key="index" data-i="{{index}}" bindtap="discardTap" class="tile">
+      <view wx:for="{{hand}}" wx:key="index" data-i="{{index}}" bindtap="discardTap"
+            class="tile {{item.sel ? 'selected' : ''}}">
+        <image class="face" src="{{item.src}}" mode="aspectFit"/>
+      </view>
+    </view>
+    <view class="hint">你选的打法（点副本可取消）：</view>
+    <view class="tiles">
+      <view wx:for="{{picks}}" wx:key="index" data-i="{{index}}" bindtap="pickTap"
+            class="tile {{item.mark}}">
         <image class="face" src="{{item.src}}" mode="aspectFit"/>
       </view>
     </view>
@@ -65,7 +73,7 @@
   </block>
 
   <view class="actions" wx:if="{{mode != 'settle'}}">
-    <view class="btn primary" wx:if="{{mode == 'ting'}}" bindtap="submit">提交</view>
+    <view class="btn primary" bindtap="submit">提交</view>
     <view class="btn" bindtap="next">下一题</view>
   </view>
 

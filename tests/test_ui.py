@@ -42,12 +42,34 @@ def test_ting_next_guard(app_page):
 def test_discard_flow(app_page):
     page = app_page
     page.locator("#tab-discard").click()
-    page.wait_for_selector("#problem button.tile")
-    assert page.locator("#problem button.tile").count() == 14
-    page.locator("#problem button.tile").nth(0).click()
-    verdict = page.locator("#verdict").inner_text()
-    assert "下叫" in verdict
-    assert page.locator("#result tr").count() >= 2
+    page.wait_for_selector("#hand button.tile")
+    assert page.locator("#hand button.tile").count() == 14
+
+    # 每种牌各点一次（全选），副本区应出现每种一张
+    tiles = page.eval_on_selector_all(
+        "#hand button.tile", "els => els.map(e => e.dataset.tile)")
+    kinds = []
+    for i, t in enumerate(tiles):
+        if t not in kinds:
+            kinds.append(t)
+            page.locator("#hand button.tile").nth(i).click()
+    assert page.locator("#picks .tile").count() == len(kinds)
+
+    # 点副本取消一个，再点手牌选回
+    first = page.locator("#picks .tile").nth(0).get_attribute("data-tile")
+    page.locator("#picks .tile").nth(0).click()
+    assert page.locator("#picks .tile").count() == len(kinds) - 1
+    page.locator("#hand button.tile").nth(tiles.index(first)).click()
+    assert page.locator("#picks .tile").count() == len(kinds)
+
+    # 全选提交：正确的标绿、多选的标红、无漏选；结果表列出全部下叫打法
+    page.locator("#submit").click()
+    assert page.locator("#verdict").inner_text() != ""
+    assert page.locator("#picks .tile.missed").count() == 0
+    good = page.locator("#picks .tile.good").count()
+    assert good >= 1
+    assert page.locator("#picks .tile.bad").count() == len(kinds) - good
+    assert page.locator("#result tr").count() == good + 1
 
 
 def test_settle_flow(app_page):
