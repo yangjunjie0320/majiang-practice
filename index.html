@@ -6,109 +6,52 @@
 <title>川麻练习</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🀄</text></svg>">
 <style>
-  /* 牌桌：深绒绿桌面；牌张与账单是桌上唯一的"实物"（骨白），
-     可点的控件共用骨牌质感，主操作与判定沿用牌面墨色（朱砂/松青） */
-  :root {
-    --felt-deep: #142e24; --felt: #1e4433; --felt-hi: #2a5c46;
-    --bone: #f7f2e4; --bone-edge: #d8cdb2; --bone-shadow: #b9ad8e;
-    --ink: #2b2118; --ink-soft: #6b5a43;
-    --red: #b3261e; --pine: #1e6b43; --brass: #d9a441;
-    --text: #e9efe7; --muted: #b9ccbf;
-  }
-  * { box-sizing: border-box; }
-  [hidden] { display: none !important; }
   body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-         max-width: 720px; margin: 0 auto; padding: 20px 16px 56px; color: var(--text);
-         min-height: 100vh; background-color: var(--felt-deep);
-         background-image: radial-gradient(1100px 700px at 50% -120px,
-           var(--felt-hi), var(--felt) 55%, var(--felt-deep)); background-attachment: fixed; }
-  h1 { font-family: "Songti SC", "STSong", "SimSun", "Noto Serif SC", serif;
-       font-size: 1.7em; font-weight: 900; letter-spacing: .14em; color: var(--bone);
-       margin: 4px 0 18px; display: flex; align-items: center; gap: 12px; }
-  .seal { font-size: .5em; font-weight: 700; letter-spacing: 0; line-height: 1;
-          background: var(--red); color: var(--bone); padding: 5px 6px;
-          border-radius: 4px; transform: rotate(-4deg);
-          box-shadow: 0 1px 2px rgba(0,0,0,.4); }
-  .tabs { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .tabs button { font-family: inherit; font-size: 1em; padding: 8px 18px; cursor: pointer;
-                 border: 1px solid rgba(247,242,228,.4); background: transparent;
-                 color: var(--bone); border-radius: 8px; transition: background .15s; }
-  .tabs button:hover { background: rgba(247,242,228,.12); }
-  .tabs button.active { background: linear-gradient(#fffef9, #efe8d3);
-                        color: var(--red); font-weight: 700; border-color: var(--bone-edge);
-                        box-shadow: 0 2px 0 var(--bone-shadow), 0 3px 6px rgba(0,0,0,.35); }
-  .tabs.diff { margin-top: 10px; }
-  .tabs.diff button { font-size: .85em; padding: 4px 14px; border-radius: 999px; }
-  .tabs.diff .hint { margin: 0; }
+         max-width: 720px; margin: 0 auto; padding: 16px; color: #222; }
+  h1 { font-size: 1.3em; }
+  .tabs button { font-size: 1em; padding: 6px 16px; margin-right: 8px; cursor: pointer;
+                 border: 1px solid #999; background: #fff; border-radius: 6px; }
+  .tabs button.active { background: #2c3e50; color: #fff; border-color: #2c3e50; }
+  .tabs.diff { margin-top: 8px; }
+  .tabs.diff button { font-size: 0.9em; padding: 4px 12px; }
   .tile-row { margin: 3px 0; }
-  .hint { color: var(--muted); margin: 14px 0 6px; font-size: .95em; }
-  .hint b { color: var(--bone); }
+  .hint { color: #666; margin: 12px 0 6px; }
   .tile { display: inline-flex; justify-content: center; align-items: center;
           width: 46px; height: 62px; padding: 0;
-          margin: 2px; border: 1px solid var(--bone-edge); border-radius: 7px;
+          margin: 2px; border: 1px solid #b8b2a6; border-radius: 7px;
           background: linear-gradient(#fffef9, #f1ecdd);
-          box-shadow: 0 2px 0 var(--bone-shadow), 0 3px 5px rgba(0,0,0,.35);
-          user-select: none; }
+          box-shadow: 0 2px 3px rgba(0,0,0,.18); user-select: none; }
   .tile .face { width: 90%; height: 90%; object-fit: contain; pointer-events: none; }
-  button.tile { cursor: pointer; transition: transform .08s; }
-  button.tile:hover { transform: translateY(-2px); }
-  .tile.selected { outline: 3px solid var(--brass); }
-  .tile.good { background: #d9efdc; border-color: #27ae60; outline: 3px solid var(--pine); }
-  .tile.bad { background: #f8dbd6; border-color: #c0392b; outline: 3px solid var(--red); }
-  .tile.missed { background: #fcf3cf; border-color: #b7950b; outline: 3px solid var(--brass); }
-  .actions { display: flex; gap: 10px; margin: 18px 0; }
-  .actions button { font-family: inherit; font-size: 1em; padding: 9px 26px; cursor: pointer;
-                    border-radius: 8px; border: 1px solid var(--bone-edge);
-                    background: linear-gradient(#fffef9, #efe8d3); color: var(--red);
-                    font-weight: 700;
-                    box-shadow: 0 2px 0 var(--bone-shadow), 0 3px 6px rgba(0,0,0,.3); }
-  .actions button:disabled { opacity: .35; box-shadow: none; cursor: default; }
-  .actions #next { background: transparent; color: var(--bone); font-weight: 400;
-                   border-color: rgba(247,242,228,.4); box-shadow: none; }
-  #verdict { font-weight: bold; font-size: 1.15em; margin: 12px 0; }
-  #verdict.ok { color: #8fe0ac; } #verdict.no { color: #ffa392; }
-  table { border-collapse: separate; border-spacing: 0; margin-top: 12px;
-          font-size: .95em; font-variant-numeric: tabular-nums; }
-  th, td { padding: 7px 14px; text-align: left; border-bottom: 1px solid #e2d7bd; }
-  th { color: var(--ink-soft); font-weight: 600; font-size: .85em; letter-spacing: .05em; }
-  tr:last-child td { border-bottom: none; }
-  tr.best { background: #e7f2e6; }
-  #result table { background: var(--bone); color: var(--ink); border-radius: 10px;
-                  overflow: hidden;
-                  box-shadow: 0 2px 0 var(--bone-shadow), 0 4px 10px rgba(0,0,0,.3); }
-  #result .hint { font-size: .85em; }
-  /* 结账：一张纸账单 */
-  #settle { background: var(--bone); color: var(--ink); border-radius: 12px;
-            padding: 18px 22px; margin-top: 16px; max-width: 560px;
-            box-shadow: 0 2px 0 var(--bone-shadow), 0 6px 14px rgba(0,0,0,.35); }
-  #settle .hint { color: var(--ink-soft); }
-  .s-row { display: flex; align-items: center; margin: 6px 0; }
-  .s-row label { width: 5.5em; color: var(--ink-soft); font-size: .95em; }
-  #settle input { font: inherit; font-variant-numeric: tabular-nums; width: 110px;
-                  padding: 5px 8px; margin: 0; text-align: right; color: var(--ink);
-                  border: none; border-bottom: 1.5px solid #cbbc9c;
-                  background: transparent; border-radius: 0; }
-  #settle input:focus { outline: none; border-bottom-color: var(--red); }
-  #settle .actions { margin: 18px 0 8px; }
-  #s-go { background: var(--red); border-color: #8f1d17; color: var(--bone);
-          box-shadow: 0 2px 0 #7c1812, 0 3px 6px rgba(0,0,0,.25); }
+  button.tile { cursor: pointer; }
+  .tile.selected { outline: 3px solid #2c3e50; }
+  .tile.good { background: #d4efdf; border-color: #27ae60; }
+  .tile.bad { background: #fadbd8; border-color: #c0392b; }
+  .tile.missed { background: #fcf3cf; border-color: #b7950b; }
+  .actions { margin: 14px 0; }
+  .actions button { font-size: 1em; padding: 8px 20px; cursor: pointer; border-radius: 6px;
+                    border: 1px solid #2c3e50; background: #2c3e50; color: #fff; }
+  .actions button:disabled { opacity: 0.4; cursor: default; }
+  .actions #next { background: #fff; color: #2c3e50; }
+  #verdict { font-size: 1.15em; }
+  table { border-collapse: collapse; margin-top: 10px; font-size: 0.95em; }
+  th, td { border: 1px solid #ccc; padding: 4px 10px; text-align: left; }
+  tr.best { background: #d4efdf; }
+  tr.worse td { color: #a0a0a0; }
+  tr.chosen td:first-child::after { content: " ←你打的"; color: #666; font-size: 0.85em; }
+  #verdict { font-weight: bold; margin: 10px 0; }
+  #verdict.ok { color: #1e8449; } #verdict.no { color: #c0392b; }
+  #settle input { font-size: 1em; width: 90px; padding: 4px 8px; margin: 2px 0;
+                  border: 1px solid #999; border-radius: 6px; }
+  .s-row { margin: 4px 0; }
+  .s-row label { display: inline-block; width: 5em; color: #444; }
   #s-check { font-weight: bold; margin: 10px 0; }
-  #s-check.ok { color: var(--pine); } #s-check.no { color: var(--red); }
-  td.recv { color: var(--pine); font-weight: 700; }
-  td.pay { color: var(--red); font-weight: 700; }
-  button:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
-  @media (max-width: 520px) {
-    .tile { width: 38px; height: 52px; border-radius: 6px; }
-    .tabs button { padding: 7px 13px; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    * { transition: none !important; }
-    button.tile:hover { transform: none; }
-  }
+  #s-check.ok { color: #1e8449; } #s-check.no { color: #c0392b; }
+  td.recv { color: #1e8449; font-weight: bold; }
+  td.pay { color: #c0392b; font-weight: bold; }
 </style>
 </head>
 <body>
-<h1>川麻练习 <span class="seal">胡</span></h1>
+<h1>川麻练习</h1>
 <div class="tabs">
   <button id="tab-settle" class="active">结账</button>
   <button id="tab-ting">听牌练习</button>
