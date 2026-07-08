@@ -53,9 +53,9 @@
 <body>
 <h1>川麻练习</h1>
 <div class="tabs">
-  <button id="tab-ting" class="active">听牌练习</button>
+  <button id="tab-settle" class="active">结账</button>
+  <button id="tab-ting">听牌练习</button>
   <button id="tab-discard">下叫练习</button>
-  <button id="tab-settle">结账</button>
 </div>
 <div class="tabs diff">
   <span class="hint">难度：</span>
@@ -88,7 +88,7 @@ const SUIT_NAMES = Majiang.SUIT_NAMES;
 const fmt = Majiang.formatTile;
 const $ = id => document.getElementById(id);
 
-let mode = "ting";
+let mode = "settle";
 let difficulty = "normal";
 let problem = null;
 let answered = false;
@@ -333,7 +333,7 @@ $("s-go").onclick = () => {
      <p class="hint">茶钱已按人数平分补回（每人 +${money(r.share)}）；茶钱现金另行结算。</p>`;
 };
 
-loadProblem();
+switchMode("settle");
 </script>
 </body>
 </html>

@@ -16,8 +16,15 @@ def app_page(page):
     assert errors == [], errors
 
 
+def test_default_page_is_settle(app_page):
+    page = app_page
+    assert page.locator("#settle").is_visible()
+    assert not page.locator("#problem").is_visible()
+
+
 def test_ting_flow(app_page):
     page = app_page
+    page.locator("#tab-ting").click()
     page.wait_for_selector("#candidates button")
     assert page.locator("#problem .tile").count() >= 13
     page.locator("#candidates button").nth(0).click()
@@ -29,6 +36,7 @@ def test_ting_flow(app_page):
 def test_ting_next_guard(app_page):
     """选了牌未提交时点下一题应先判定，再点才换题。"""
     page = app_page
+    page.locator("#tab-ting").click()
     page.wait_for_selector("#candidates button")
     page.locator("#candidates button").nth(0).click()
     page.locator("#next").click()

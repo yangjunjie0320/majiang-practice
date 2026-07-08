@@ -24,7 +24,7 @@ function rowsBySuit(tiles) {
 
 Page({
   data: {
-    mode: "ting",
+    mode: "settle",
     difficulty: "normal",
     hand: [],
     candidateRows: [],
@@ -47,7 +47,7 @@ Page({
   },
 
   onLoad() {
-    this.newProblem();
+    if (this.data.mode !== "settle") this.newProblem();
   },
 
   switchMode(e) {

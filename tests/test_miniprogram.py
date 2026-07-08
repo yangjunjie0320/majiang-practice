@@ -31,8 +31,12 @@ HARNESS = """
   };
   const flat = (rows) => [].concat(...rows);
 
-  // 已下叫模式：全选正确答案应判对
+  // 默认打开结账页，不出题
   inst.onLoad();
+  check("默认结账页", inst.data.mode === "settle" && inst.data.hand.length === 0);
+
+  // 已下叫模式：全选正确答案应判对
+  inst.switchMode({ currentTarget: { dataset: { mode: "ting" } } });
   check("ting 手牌 13", inst.data.hand.length === 13);
   check("ting 有候选", flat(inst.data.candidateRows).length >= 9);
   check("候选牌花色分行", inst.data.candidateRows.every(

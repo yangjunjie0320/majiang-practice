@@ -1,8 +1,8 @@
 <view class="page">
   <view class="tabs">
+    <view class="tab {{mode == 'settle' ? 'active' : ''}}" data-mode="settle" bindtap="switchMode">结账</view>
     <view class="tab {{mode == 'ting' ? 'active' : ''}}" data-mode="ting" bindtap="switchMode">听牌练习</view>
     <view class="tab {{mode == 'discard' ? 'active' : ''}}" data-mode="discard" bindtap="switchMode">下叫练习</view>
-    <view class="tab {{mode == 'settle' ? 'active' : ''}}" data-mode="settle" bindtap="switchMode">结账</view>
   </view>
   <view class="tabs diff" wx:if="{{mode != 'settle'}}">
     <view class="hint">难度：</view>
