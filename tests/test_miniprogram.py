@@ -93,14 +93,19 @@ HARNESS = """
     inst.sChipInput({ currentTarget: { dataset: { i } }, detail: { value: v } }));
   inst.sTeaInput({ detail: { value: "20" } });
   inst.doSettle();
-  check("settle 行数", inst.data.sRows.length === 4);
   check("settle 对账平", inst.data.sBalanced === true);
-  check("settle 甲收45", inst.data.sRows[0].text === "收 45 元");
-  check("settle 丁付30", inst.data.sRows[3].text === "付 30 元");
+  check("settle 行数", inst.data.sRes.length === 4);
+  check("settle 甲收45", inst.data.sRes[0].text === "收 45 元");
+  check("settle 丁付30", inst.data.sRes[3].text === "付 30 元");
   inst.sChipInput({ currentTarget: { dataset: { i: 0 } }, detail: { value: "130" } });
+  check("settle 改值清结果", inst.data.sRes.length === 0);
   inst.doSettle();
   check("settle 对账差", inst.data.sBalanced === false
-    && inst.data.sCheck.includes("差 10"));
+    && inst.data.sCheck.includes("差 10") && inst.data.sRes.length === 0);
+  inst.sCountInput({ detail: { value: "4.5" } });
+  check("settle 人数4.5不重建", inst.data.sChips.length === 4);
+  inst.doSettle();
+  check("settle 人数4.5报错", inst.data.sCheck.includes("人数"));
   inst.sCountInput({ detail: { value: "3" } });
   check("settle 人数改3", inst.data.sChips.length === 3);
 

@@ -94,13 +94,21 @@ def test_settle_flow(app_page):
     page.locator("#s-tea").fill("20")
     page.locator("#s-go").click()
     assert "对账正确" in page.locator("#s-check").inner_text()
-    out = page.locator("#s-out").inner_text()
-    assert "收 45 元" in out and "付 30 元" in out and "付 5 元" in out
+    # 输赢显示在每家输入行右侧
+    res = [page.locator("#s-players .s-res").nth(i).inner_text() for i in range(4)]
+    assert res == ["收 45 元", "付 5 元", "付 10 元", "付 30 元"]
 
-    # 数错筹码应提示差额
+    # 数错筹码应提示差额，且不显示输赢
     page.locator("#s-players input").nth(0).fill("130")
     page.locator("#s-go").click()
     assert "差 10" in page.locator("#s-check").inner_text()
+    assert page.locator("#s-players .s-res").nth(0).inner_text() == ""
+
+    # 人数非法（4.5）应报错且不重建输入行
+    page.locator("#s-count").fill("4.5")
+    assert page.locator("#s-players input").count() == 4
+    page.locator("#s-go").click()
+    assert "人数" in page.locator("#s-check").inner_text()
 
     # 人数改 3 应重建输入行
     page.locator("#s-count").fill("3")

@@ -41,7 +41,7 @@ Page({
     sChips: ["", "", "", ""],
     sTea: "0",
     sShare: "0",
-    sRows: [],
+    sRes: [],
     sCheck: "",
     sBalanced: true,
   },
@@ -196,10 +196,11 @@ Page({
   },
 
   // ---- 结账 ----
+  // 任何输入变化都清掉上次结算结果，避免显示过期数字
   sCountInput(e) {
     const n = Number(e.detail.value);
-    const patch = { sCount: e.detail.value };
-    if (n >= 2 && n <= 8) {
+    const patch = { sCount: e.detail.value, sRes: [], sCheck: "", sBalanced: true };
+    if (Number.isInteger(n) && n >= 2 && n <= 8) {
       // 人数变化时重建筹码数组，保留已填的值
       const chips = [];
       for (let i = 0; i < n; i++) chips.push(this.data.sChips[i] || "");
@@ -209,44 +210,47 @@ Page({
   },
 
   sInitInput(e) {
-    this.setData({ sInit: e.detail.value });
+    this.setData({ sInit: e.detail.value, sRes: [], sCheck: "", sBalanced: true });
   },
 
   sTeaInput(e) {
-    this.setData({ sTea: e.detail.value });
+    this.setData({ sTea: e.detail.value, sRes: [], sCheck: "", sBalanced: true });
   },
 
   sChipInput(e) {
     const chips = this.data.sChips.slice();
     chips[e.currentTarget.dataset.i] = e.detail.value;
-    this.setData({ sChips: chips });
+    this.setData({ sChips: chips, sRes: [], sCheck: "", sBalanced: true });
   },
 
   doSettle() {
     const money = (x) => String(Math.round(x * 100) / 100);
-    const init = Number(this.data.sInit);
-    const tea = Number(this.data.sTea);
+    const fail = (msg) => this.setData({ sCheck: msg, sBalanced: false, sRes: [] });
+    const cnt = Number(this.data.sCount);
+    if (!Number.isInteger(cnt) || cnt < 2 || cnt > 8) return fail("人数需为 2-8 的整数。");
+    const init = String(this.data.sInit).trim() === "" ? NaN : Number(this.data.sInit);
+    if (!Number.isInteger(init) || init <= 0) return fail("起始筹码需为正整数。");
     const chips = this.data.sChips.map((v) =>
       String(v).trim() === "" ? NaN : Number(v));
-    if (!isFinite(init) || !isFinite(tea) || chips.some((c) => !isFinite(c))) {
-      this.setData({ sCheck: "请把所有数字填完整。", sBalanced: false, sRows: [] });
-      return;
-    }
+    if (chips.some((c) => !Number.isInteger(c) || c < 0))
+      return fail("每家终局筹码需为非负整数，请填完整。");
+    const tea = String(this.data.sTea).trim() === "" ? NaN : Number(this.data.sTea);
+    if (!Number.isInteger(tea) || tea < 0) return fail("茶钱需为非负整数。");
+
     const n = chips.length;
     const r = Majiang.settle(init, chips, tea);
-    const total = chips.reduce((a, b) => a + b, 0) + tea;
+    if (r.diff !== 0) {
+      const total = chips.reduce((a, b) => a + b, 0) + tea;
+      return fail(`对不上：${n} 家筹码 + 茶钱 = ${total}，` +
+        `应为 ${n} × ${init} = ${init * n}，差 ${money(Math.abs(r.diff))}，请核对后再结算。`);
+    }
     this.setData({
-      sBalanced: r.diff === 0,
-      sCheck: r.diff === 0
-        ? `对账正确：${n} 家筹码 + 茶钱 = ${init * n}。`
-        : `对不上：${n} 家筹码 + 茶钱 = ${total}，应为 ${n} × ${init} = ${init * n}，` +
-          `差 ${money(Math.abs(r.diff))}，请核对。`,
+      sBalanced: true,
+      sCheck: `对账正确：${n} 家筹码 + 茶钱 = ${init * n}。`,
       sShare: money(r.share),
-      sRows: chips.map((c, i) => {
-        const d = Math.round(r.deltas[i] * 100) / 100;
+      sRes: r.deltas.map((x) => {
+        const d = Math.round(x * 100) / 100;
         return {
-          name: `玩家${i + 1}`,
-          chips: c,
           cls: d > 0 ? "recv" : d < 0 ? "pay" : "",
           text: d > 0 ? `收 ${money(d)} 元` : d < 0 ? `付 ${money(-d)} 元` : "不输不赢",
         };

@@ -49,6 +49,7 @@
     <view class="s-row" wx:for="{{sChips}}" wx:key="index">
       <text class="s-label">玩家{{index + 1}}</text>
       <input class="num" type="number" value="{{item}}" data-i="{{index}}" bindinput="sChipInput"/>
+      <text class="s-res {{sRes[index].cls}}">{{sRes[index].text}}</text>
     </view>
     <view class="s-row"><text class="s-label">茶钱筹码</text>
       <input class="num" type="number" value="{{sTea}}" bindinput="sTeaInput"/></view>
@@ -56,16 +57,7 @@
       <view class="btn primary" bindtap="doSettle">结算</view>
     </view>
     <view class="verdict {{sBalanced ? 'ok' : 'no'}}">{{sCheck}}</view>
-    <view wx:if="{{sRows.length > 0}}" class="table">
-      <view class="tr th">
-        <view class="td">玩家</view><view class="td">终局筹码</view><view class="td wide">输赢</view>
-      </view>
-      <view wx:for="{{sRows}}" wx:key="index" class="tr">
-        <view class="td">{{item.name}}</view><view class="td">{{item.chips}}</view>
-        <view class="td wide {{item.cls}}">{{item.text}}</view>
-      </view>
-    </view>
-    <view class="hint" wx:if="{{sRows.length > 0}}">茶钱已按人数平分补回（每人 +{{sShare}}）；茶钱现金另行结算。</view>
+    <view class="hint" wx:if="{{sBalanced && sRes.length > 0}}">茶钱已按人数平分补回（每人 +{{sShare}}）；茶钱现金另行结算。</view>
   </block>
 
   <view class="actions" wx:if="{{mode != 'settle'}}">

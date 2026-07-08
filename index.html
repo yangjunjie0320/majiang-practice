@@ -50,8 +50,9 @@
   .s-row label { display: inline-block; width: 5em; color: #444; }
   #s-check { font-weight: bold; margin: 10px 0; }
   #s-check.ok { color: #1e8449; } #s-check.no { color: #c0392b; }
-  td.recv { color: #1e8449; font-weight: bold; }
-  td.pay { color: #c0392b; font-weight: bold; }
+  .s-res { margin-left: 10px; }
+  .s-res.recv { color: #1e8449; font-weight: bold; }
+  .s-res.pay { color: #c0392b; font-weight: bold; }
   button:focus-visible, input:focus-visible { outline: 2px solid #2c3e50; outline-offset: 2px; }
   @media (max-width: 520px) {
     .tile { width: 38px; height: 52px; border-radius: 6px; }
@@ -304,7 +305,7 @@ function switchMode(m) {
 // ---- 结账 ----
 function money(x) { return String(Math.round(x * 100) / 100); }
 
-// 人数变化时重建筹码输入行，保留已填的值
+// 人数变化时重建筹码输入行，保留已填的值；结果显示在每行右侧
 function buildPlayerRows(n) {
   const box = $("s-players");
   const old = [...box.querySelectorAll("input")].map(i => i.value);
@@ -312,49 +313,63 @@ function buildPlayerRows(n) {
   for (let i = 0; i < n; i++) {
     const row = document.createElement("div");
     row.className = "s-row";
-    row.innerHTML = `<label>玩家${i + 1}</label><input class="s-chip" type="number">`;
+    row.innerHTML =
+      `<label>玩家${i + 1}</label><input class="s-chip" type="number"><span class="s-res"></span>`;
     row.querySelector("input").value = old[i] !== undefined ? old[i] : "";
     box.appendChild(row);
   }
 }
-$("s-count").oninput = () => {
-  const n = Number($("s-count").value);
-  if (n >= 2 && n <= 8) buildPlayerRows(n);
-};
 buildPlayerRows(4);
 
+// 任何输入变化都清掉上次结算结果，避免显示过期数字
+function clearSettleResults() {
+  $("s-check").textContent = "";
+  $("s-check").className = "";
+  $("s-out").innerHTML = "";
+  document.querySelectorAll("#s-players .s-res").forEach(e => {
+    e.textContent = "";
+    e.className = "s-res";
+  });
+}
+$("settle").addEventListener("input", e => {
+  if (e.target.id === "s-count") {
+    const n = Number(e.target.value);
+    if (Number.isInteger(n) && n >= 2 && n <= 8) buildPlayerRows(n);
+  }
+  clearSettleResults();
+});
+
 $("s-go").onclick = () => {
-  const init = Number($("s-init").value);
-  const tea = Number($("s-tea").value);
+  clearSettleResults();
+  const check = $("s-check");
+  const fail = msg => { check.textContent = msg; check.className = "no"; };
+  const cnt = Number($("s-count").value);
+  if (!Number.isInteger(cnt) || cnt < 2 || cnt > 8) return fail("人数需为 2-8 的整数。");
+  const init = $("s-init").value.trim() === "" ? NaN : Number($("s-init").value);
+  if (!Number.isInteger(init) || init <= 0) return fail("起始筹码需为正整数。");
   const chips = [...document.querySelectorAll("#s-players input")]
     .map(i => i.value.trim() === "" ? NaN : Number(i.value));
-  const check = $("s-check");
-  if (!isFinite(init) || !isFinite(tea) || chips.some(c => !isFinite(c))) {
-    check.textContent = "请把所有数字填完整。";
-    check.className = "no";
-    $("s-out").innerHTML = "";
-    return;
-  }
+  if (chips.some(c => !Number.isInteger(c) || c < 0))
+    return fail("每家终局筹码需为非负整数，请填完整。");
+  const tea = $("s-tea").value.trim() === "" ? NaN : Number($("s-tea").value);
+  if (!Number.isInteger(tea) || tea < 0) return fail("茶钱需为非负整数。");
+
   const n = chips.length;
   const r = Majiang.settle(init, chips, tea);
-  if (r.diff === 0) {
-    check.textContent = `对账正确：${n} 家筹码 + 茶钱 = ${init * n}。`;
-    check.className = "ok";
-  } else {
+  if (r.diff !== 0) {
     const total = chips.reduce((a, b) => a + b, 0) + tea;
-    check.textContent = `对不上：${n} 家筹码 + 茶钱 = ${total}，` +
-      `应为 ${n} × ${init} = ${init * n}，差 ${money(Math.abs(r.diff))}，请核对。`;
-    check.className = "no";
+    return fail(`对不上：${n} 家筹码 + 茶钱 = ${total}，` +
+      `应为 ${n} × ${init} = ${init * n}，差 ${money(Math.abs(r.diff))}，请核对后再结算。`);
   }
-  const rows = chips.map((c, i) => {
+  check.textContent = `对账正确：${n} 家筹码 + 茶钱 = ${init * n}。`;
+  check.className = "ok";
+  document.querySelectorAll("#s-players .s-res").forEach((e, i) => {
     const d = Math.round(r.deltas[i] * 100) / 100;
-    const cls = d > 0 ? "recv" : d < 0 ? "pay" : "";
-    const txt = d > 0 ? `收 ${money(d)} 元` : d < 0 ? `付 ${money(-d)} 元` : "不输不赢";
-    return `<tr><td>玩家${i + 1}</td><td>${c}</td><td class="${cls}">${txt}</td></tr>`;
-  }).join("");
+    e.className = "s-res " + (d > 0 ? "recv" : d < 0 ? "pay" : "");
+    e.textContent = d > 0 ? `收 ${money(d)} 元` : d < 0 ? `付 ${money(-d)} 元` : "不输不赢";
+  });
   $("s-out").innerHTML =
-    `<table><tr><th>玩家</th><th>终局筹码</th><th>输赢</th></tr>${rows}</table>
-     <p class="hint">茶钱已按人数平分补回（每人 +${money(r.share)}）；茶钱现金另行结算。</p>`;
+    `<p class="hint">茶钱已按人数平分补回（每人 +${money(r.share)}）；茶钱现金另行结算。</p>`;
 };
 
 switchMode("settle");
