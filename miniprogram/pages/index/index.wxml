@@ -86,10 +86,10 @@
 
   <view wx:if="{{discardRows.length > 0}}" class="table">
     <view class="tr th">
-      <view class="td">下叫打法</view><view class="td wide">听牌</view><view class="td">枚数</view>
+      <view class="td">下叫打法</view><view class="td wide">听牌</view>
     </view>
     <view wx:for="{{discardRows}}" wx:key="index" class="tr best">
-      <view class="td">打 {{item.text}}</view><view class="td wide">{{item.waits}}</view><view class="td">{{item.count}} 枚</view>
+      <view class="td">打 {{item.text}}</view><view class="td wide">{{item.waits}}</view>
     </view>
   </view>
 

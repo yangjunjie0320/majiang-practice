@@ -9,8 +9,11 @@
   body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
          max-width: 720px; margin: 0 auto; padding: 16px; color: #222; }
   h1 { font-size: 1.3em; }
+  [hidden] { display: none !important; }
   .tabs button { font-size: 1em; padding: 6px 16px; margin-right: 8px; cursor: pointer;
-                 border: 1px solid #999; background: #fff; border-radius: 6px; }
+                 border: 1px solid #999; background: #fff; border-radius: 6px;
+                 transition: background 0.15s; }
+  .tabs button:hover { background: #eef1f4; }
   .tabs button.active { background: #2c3e50; color: #fff; border-color: #2c3e50; }
   .tabs.diff { margin-top: 8px; }
   .tabs.diff button { font-size: 0.9em; padding: 4px 12px; }
@@ -22,7 +25,8 @@
           background: linear-gradient(#fffef9, #f1ecdd);
           box-shadow: 0 2px 3px rgba(0,0,0,.18); user-select: none; }
   .tile .face { width: 90%; height: 90%; object-fit: contain; pointer-events: none; }
-  button.tile { cursor: pointer; }
+  button.tile { cursor: pointer; transition: transform 0.08s, box-shadow 0.08s; }
+  button.tile:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,.22); }
   .tile.selected { outline: 3px solid #2c3e50; }
   .tile.good { background: #d4efdf; border-color: #27ae60; }
   .tile.bad { background: #fadbd8; border-color: #c0392b; }
@@ -48,6 +52,15 @@
   #s-check.ok { color: #1e8449; } #s-check.no { color: #c0392b; }
   td.recv { color: #1e8449; font-weight: bold; }
   td.pay { color: #c0392b; font-weight: bold; }
+  button:focus-visible, input:focus-visible { outline: 2px solid #2c3e50; outline-offset: 2px; }
+  @media (max-width: 520px) {
+    .tile { width: 38px; height: 52px; border-radius: 6px; }
+    .tabs button { padding: 6px 13px; margin-right: 6px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+    button.tile:hover { transform: none; }
+  }
 </style>
 </head>
 <body>
@@ -238,10 +251,10 @@ function judgeDiscard() {
   v.className = ok ? "ok" : "no";
   const rows = problem.answer.detail.map(d =>
     `<tr class="best"><td>打 ${fmt(d.tile)}</td>` +
-    `<td>${d.waits.map(fmt).join(" ")}</td><td>${d.count} 枚</td></tr>`).join("");
+    `<td>${d.waits.map(fmt).join(" ")}</td></tr>`).join("");
   $("result").innerHTML =
-    `<table><tr><th>下叫打法</th><th>听牌</th><th>枚数</th></tr>${rows}</table>
-     <p class="hint">枚数按每种剩 4 张减去手中张数估算；打其他牌都不能下叫。</p>`;
+    `<table><tr><th>下叫打法</th><th>听牌</th></tr>${rows}</table>
+     <p class="hint">打其他牌都不能下叫。</p>`;
   v.scrollIntoView({ block: "nearest" });
 }
 

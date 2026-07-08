@@ -178,9 +178,8 @@ Page({
       discardRows: this.problem.answer.detail.map((d) => ({
         text: Majiang.formatTile(d.tile),
         waits: d.waits.map(Majiang.formatTile).join(" "),
-        count: d.count,
       })),
-      footnote: "枚数按每种剩 4 张减去手中张数估算；打其他牌都不能下叫。",
+      footnote: "打其他牌都不能下叫。",
     });
   },
 
