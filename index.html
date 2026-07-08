@@ -150,37 +150,56 @@ function render() {
     $("submit").disabled = false;
   } else {
     box.insertAdjacentHTML("beforeend",
-      `<p class="hint">定缺<b>${SUIT_NAMES[problem.missing_suit]}</b>，摸牌后 14 张。点选<b>所有</b>打出后能下叫的牌，然后提交：</p>`);
-    const handDiv = document.createElement("div");
-    handDiv.id = "hand";
-    problem.hand.forEach(t => {
-      const b = tileSpan(t, "button");
-      b.onclick = () => { if (!answered) toggleDiscard(t); };
-      handDiv.appendChild(b);
-    });
-    box.appendChild(handDiv);
-    box.insertAdjacentHTML("beforeend", '<p class="hint">你选的打法（点副本可取消）：</p>');
-    const picks = document.createElement("div");
-    picks.id = "picks";
-    box.appendChild(picks);
+      `<p class="hint">定缺<b>${SUIT_NAMES[problem.missing_suit]}</b>，摸牌后 14 张。选出<b>所有</b>打出后能下叫的打法，每排点选一张：</p>`);
+    const rows = document.createElement("div");
+    rows.id = "rows";
+    box.appendChild(rows);
+    renderDiscardRows();
     $("submit").hidden = false;
     $("submit").disabled = false;
   }
 }
 
-function toggleDiscard(t) {
-  const i = discardPicks.indexOf(t);
-  if (i >= 0) discardPicks.splice(i, 1);
-  else discardPicks.push(t);
-  const box = $("picks");
+// 已选 n 种打法就显示 n+1 排手牌，每排点选一张；点该排已选的牌取消整排，
+// 点其他牌换选（与其他排重复的忽略）；判定后漏选的打法补成新排标黄
+function renderDiscardRows() {
+  const box = $("rows");
   box.innerHTML = "";
-  Majiang.sortTiles(discardPicks.slice()).forEach(x => {
-    const b = tileSpan(x, "button");
-    b.onclick = () => { if (!answered) toggleDiscard(x); };
-    box.appendChild(b);
+  const correct = answered ? new Set(problem.answer.best) : null;
+  const rows = discardPicks.map(t => ({ pick: t, missed: false }));
+  if (!answered) rows.push({ pick: null, missed: false });
+  else Majiang.sortTiles(problem.answer.best.filter(t => !discardPicks.includes(t)))
+    .forEach(t => rows.push({ pick: t, missed: true }));
+  rows.forEach((r, i) => {
+    const label = r.pick === null
+      ? (i === 0 ? "点选一张打出后能下叫的牌：" : `第 ${i + 1} 种打法（点选一张，或直接提交）：`)
+      : r.missed ? "漏选的打法：" : `第 ${i + 1} 种打法：`;
+    box.insertAdjacentHTML("beforeend", `<p class="hint">${label}</p>`);
+    const div = document.createElement("div");
+    div.className = "d-row";
+    let marked = false;
+    problem.hand.forEach(t => {
+      const b = tileSpan(t, "button");
+      if (!marked && t === r.pick) {
+        marked = true;
+        if (!answered) b.classList.add("selected");
+        else b.classList.add(r.missed ? "missed" : correct.has(t) ? "good" : "bad");
+      }
+      b.onclick = () => { if (!answered) pickInRow(i, t); };
+      div.appendChild(b);
+    });
+    box.appendChild(div);
   });
-  document.querySelectorAll("#hand .tile").forEach(b =>
-    b.classList.toggle("selected", discardPicks.includes(b.dataset.tile)));
+}
+
+function pickInRow(i, t) {
+  if (i < discardPicks.length) {
+    if (discardPicks[i] === t) discardPicks.splice(i, 1);
+    else if (!discardPicks.includes(t)) discardPicks[i] = t;
+  } else if (!discardPicks.includes(t)) {
+    discardPicks.push(t);
+  }
+  renderDiscardRows();
 }
 
 function judgeTing() {
@@ -213,15 +232,7 @@ function judgeDiscard() {
   const correct = new Set(problem.answer.best);
   const chosen = new Set(discardPicks);
   const ok = correct.size === chosen.size && [...correct].every(t => chosen.has(t));
-  document.querySelectorAll("#picks .tile").forEach(b => {
-    b.classList.add(correct.has(b.dataset.tile) ? "good" : "bad");
-  });
-  // 漏选的补在副本区末尾标黄
-  Majiang.sortTiles([...correct].filter(t => !chosen.has(t))).forEach(t => {
-    const b = tileSpan(t, "button");
-    b.classList.add("missed");
-    $("picks").appendChild(b);
-  });
+  renderDiscardRows();
   const v = $("verdict");
   v.textContent = ok ? "正确！" : "不对，看看漏了或多选了哪些。";
   v.className = ok ? "ok" : "no";

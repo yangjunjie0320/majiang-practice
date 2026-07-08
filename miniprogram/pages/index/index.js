@@ -28,7 +28,7 @@ Page({
     difficulty: "normal",
     hand: [],
     candidateRows: [],
-    picks: [],
+    rows: [],
     missingName: "",
     answered: false,
     verdict: "",
@@ -67,11 +67,12 @@ Page({
       ? Majiang.makeTingProblem(Math.random, difficulty)
       : Majiang.makeDiscardProblem(Math.random, difficulty);
     this.problem = p;
+    this.discardPicks = [];
     this.setData({
       hand: p.hand.map(deco),
       candidateRows: mode === "ting" ? rowsBySuit(p.candidates) : [],
       missingName: mode === "discard" ? Majiang.SUIT_NAMES[p.missing_suit] : "",
-      picks: [],
+      rows: mode === "discard" ? this.buildDiscardRows(false) : [],
       answered: false,
       verdict: "",
       verdictOk: false,
@@ -124,44 +125,54 @@ Page({
     });
   },
 
-  // 点手牌：把该牌加入/移出下方副本区（同种牌只记一次）
+  // 已选 n 种打法就显示 n+1 排手牌，每排点选一张；点该排已选的牌取消整排，
+  // 点其他牌换选（与其他排重复的忽略）；判定后漏选的打法补成新排标黄
+  buildDiscardRows(answered) {
+    const picks = this.discardPicks;
+    const correct = answered ? new Set(this.problem.answer.best) : null;
+    const rows = picks.map((t) => ({ pick: t, missed: false }));
+    if (!answered) rows.push({ pick: null, missed: false });
+    else Majiang.sortTiles(this.problem.answer.best.filter((t) => !picks.includes(t)))
+      .forEach((t) => rows.push({ pick: t, missed: true }));
+    return rows.map((r, i) => {
+      let marked = false;
+      const tiles = this.problem.hand.map((t) => {
+        const d = deco(t);
+        if (!marked && t === r.pick) {
+          marked = true;
+          if (!answered) d.sel = true;
+          else d.mark = r.missed ? "missed" : correct.has(t) ? "good" : "bad";
+        }
+        return d;
+      });
+      const label = r.pick === null
+        ? (i === 0 ? "点选一张打出后能下叫的牌：" : `第 ${i + 1} 种打法（点选一张，或直接提交）：`)
+        : r.missed ? "漏选的打法：" : `第 ${i + 1} 种打法：`;
+      return { label, tiles };
+    });
+  },
+
   discardTap(e) {
     if (this.data.answered || this.data.mode !== "discard") return;
-    this.togglePick(this.data.hand[e.currentTarget.dataset.i].tile);
-  },
-
-  // 点副本：取消该选择
-  pickTap(e) {
-    if (this.data.answered) return;
-    this.togglePick(this.data.picks[e.currentTarget.dataset.i].tile);
-  },
-
-  togglePick(tile) {
-    let tiles = this.data.picks.map((p) => p.tile);
-    tiles = tiles.includes(tile)
-      ? tiles.filter((t) => t !== tile)
-      : tiles.concat(tile);
-    const sel = new Set(tiles);
-    this.setData({
-      picks: Majiang.sortTiles(tiles).map(deco),
-      hand: this.data.hand.map((h) => ({ ...h, sel: sel.has(h.tile) })),
-    });
+    const { r, i } = e.currentTarget.dataset;
+    const t = this.problem.hand[i];
+    const picks = this.discardPicks;
+    if (r < picks.length) {
+      if (picks[r] === t) picks.splice(r, 1);
+      else if (!picks.includes(t)) picks[r] = t;
+    } else if (!picks.includes(t)) {
+      picks.push(t);
+    }
+    this.setData({ rows: this.buildDiscardRows(false) });
   },
 
   judgeDiscard() {
     const correct = new Set(this.problem.answer.best);
-    const chosen = new Set(this.data.picks.map((p) => p.tile));
+    const chosen = new Set(this.discardPicks);
     const ok = correct.size === chosen.size && [...correct].every((t) => chosen.has(t));
-    const picks = this.data.picks.map((p) => ({
-      ...p, mark: correct.has(p.tile) ? "good" : "bad",
-    }));
-    // 漏选的补在副本区末尾标黄
-    Majiang.sortTiles([...correct].filter((t) => !chosen.has(t))).forEach((t) => {
-      picks.push({ ...deco(t), mark: "missed" });
-    });
     this.setData({
       answered: true,
-      picks,
+      rows: this.buildDiscardRows(true),
       verdict: ok ? "正确！" : "不对，看看漏了或多选了哪些。",
       verdictOk: ok,
       discardRows: this.problem.answer.detail.map((d) => ({
@@ -178,7 +189,7 @@ Page({
     if (!this.data.answered
         && ((this.data.mode === "ting"
              && this.data.candidateRows.some((row) => row.some((c) => c.sel)))
-            || (this.data.mode === "discard" && this.data.picks.length > 0))) {
+            || (this.data.mode === "discard" && this.discardPicks.length > 0))) {
       this.submit();
       return;
     }

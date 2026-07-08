@@ -49,26 +49,29 @@ HARNESS = """
   check("ting 标注 good", flat(inst.data.candidateRows)
     .filter((c) => c.mark === "good").length === correct.size);
 
-  // 未下叫模式：选齐所有下叫打法应判对
+  // 未下叫模式：每排选一张，选齐所有下叫打法应判对
   inst.setData({ mode: "discard" });
   inst.newProblem();
-  check("discard 手牌 14", inst.data.hand.length === 14);
+  check("discard 初始一排", inst.data.rows.length === 1);
+  check("discard 每排 14 张", inst.data.rows[0].tiles.length === 14);
   check("discard 定缺名", ["万", "条", "筒"].includes(inst.data.missingName));
   const best = inst.problem.answer.best;
-  best.forEach((t) => {
-    const idx = inst.data.hand.findIndex((c) => c.tile === t);
-    inst.discardTap({ currentTarget: { dataset: { i: idx } } });
+  best.forEach((t, k) => {
+    const idx = inst.problem.hand.indexOf(t);
+    inst.discardTap({ currentTarget: { dataset: { r: k, i: idx } } });
   });
-  check("discard 副本数", inst.data.picks.length === best.length);
-  check("discard 手牌高亮", inst.data.hand.some((h) => h.sel));
-  const t0 = inst.data.picks[0].tile;
-  inst.pickTap({ currentTarget: { dataset: { i: 0 } } });
-  check("discard 点副本取消", inst.data.picks.length === best.length - 1);
-  inst.togglePick(t0);
-  check("discard 选回", inst.data.picks.length === best.length);
+  check("discard 排数", inst.data.rows.length === best.length + 1);
+  // 点第一排已选的牌取消整排，再在待选排选回
+  inst.discardTap({ currentTarget: { dataset: { r: 0, i: inst.problem.hand.indexOf(best[0]) } } });
+  check("discard 取消一排", inst.data.rows.length === best.length);
+  inst.discardTap({ currentTarget: {
+    dataset: { r: best.length - 1, i: inst.problem.hand.indexOf(best[0]) } } });
+  check("discard 选回", inst.data.rows.length === best.length + 1);
   inst.submit();
   check("discard 判定正确", inst.data.verdictOk === true);
-  check("discard 全对标绿", inst.data.picks.every((p) => p.mark === "good"));
+  check("discard 待选排消失", inst.data.rows.length === best.length);
+  check("discard 全对标绿", inst.data.rows.every(
+    (row) => row.tiles.filter((t) => t.mark === "good").length === 1));
   check("discard 结果非空", inst.data.discardRows.length > 0);
 
   // 切换难度应出新题且不报错
