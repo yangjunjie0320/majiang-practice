@@ -620,10 +620,23 @@ const Majiang = (() => {
   // 结账：局中赢家按比例交的茶钱筹码只记比例，真实茶钱现金另结。
   // 结算时把茶钱按人数平分补回每人：输赢 = 筹码 + 茶钱/人数 − 起始。
   // 对账（diff===0，即 Σ筹码+茶钱 = 人数×起始）通过时输赢之和恰为 0。
+  // 茶钱除不尽时逐人四舍五入会差一两分钱，deltas 改为按分为单位守恒
+  // 分配：每家先取整分（各家余数数学上相同），差的几分从第一家起补齐，
+  // 保证金额之和恰为 0 可闭环转账。全程整数运算，无浮点误差。
   function settle(initial, chips, tea) {
-    const share = tea / chips.length;
-    const deltas = chips.map((c) => c + share - initial);
-    const diff = chips.reduce((a, b) => a + b, 0) + tea - initial * chips.length;
+    const n = chips.length;
+    const share = tea / n;
+    const diff = chips.reduce((a, b) => a + b, 0) + tea - initial * n;
+    const base = Math.floor((tea * 100) / n);
+    let left = tea * 100 - base * n;
+    const deltas = chips.map((c) => {
+      let cents = (c - initial) * 100 + base;
+      if (left > 0) {
+        cents += 1;
+        left -= 1;
+      }
+      return cents / 100;
+    });
     return { share, deltas, diff };
   }
 

@@ -224,6 +224,14 @@ CHECKS = """
   check("settle 对账差", M.settle(100, [100, 100, 100, 90], 0).diff === -10);
   check("settle 三人", JSON.stringify(M.settle(50, [80, 20, 50], 0).deltas)
     === JSON.stringify([30, -30, 0]));
+  // 茶钱除不尽：金额按分守恒分配，总和恰为 0（差额分从第一家起补）
+  const st2 = M.settle(100, [100, 100, 99], 1);
+  check("settle 除不尽守恒", JSON.stringify(st2.deltas)
+    === JSON.stringify([0.34, 0.33, -0.67]) && st2.diff === 0);
+  const st3 = M.settle(100, [103, 99, 88], 10);
+  check("settle 除不尽和为零", st3.diff === 0
+    && Math.round(st3.deltas.reduce((a, b) => a + b, 0) * 100) === 0
+    && JSON.stringify(st3.deltas) === JSON.stringify([6.34, 2.33, -8.67]));
 
   return fails;
 }
