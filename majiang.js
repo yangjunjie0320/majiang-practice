@@ -493,14 +493,16 @@ const Majiang = (() => {
   // 否则取听牌数最多（最难）的一种。简单/普通档按权重翻副露；
   // 困难档带副露命中率过低，按 0.7/0.2/0.1 的权重走静态题池。
   function makeTingProblem(rng = Math.random, difficulty = null) {
-    for (;;) {
-      if (difficulty === "hard") {
-        const r = rng();
-        if (r < 0.3) {
-          const p = poolProblem(rng, "ting", r < 0.1 ? 2 : 1);
-          if (p) return p;
-        }
+    // 副露数只在进函数时抽一次签；若放进重试循环，门清生成一轮命中
+    // 困难档的概率低，会反复重掷把题池（副露）份额放大到七成
+    if (difficulty === "hard") {
+      const r = rng();
+      if (r < 0.3) {
+        const p = poolProblem(rng, "ting", r < 0.1 ? 2 : 1);
+        if (p) return p;
       }
+    }
+    for (;;) {
       const gen = randomCompleteHand(rng);
       if (gen === null || !isWin(gen.counts)) continue;
       const counts = gen.counts;
@@ -562,14 +564,15 @@ const Majiang = (() => {
   // 答案数分档筛选，否则取能下叫的打法最多（选择最多、最难）的一种。
   // 副露处理与听牌题相同。
   function makeDiscardProblem(rng = Math.random, difficulty = null) {
-    for (;;) {
-      if (difficulty === "hard") {
-        const r = rng();
-        if (r < 0.3) {
-          const p = poolProblem(rng, "discard", r < 0.1 ? 2 : 1);
-          if (p) return p;
-        }
+    // 抽签放循环外，理由同 makeTingProblem
+    if (difficulty === "hard") {
+      const r = rng();
+      if (r < 0.3) {
+        const p = poolProblem(rng, "discard", r < 0.1 ? 2 : 1);
+        if (p) return p;
       }
+    }
+    for (;;) {
       const kept = sampleTwoSuits(rng);
       const missingSuit = SUITS[[0, 1, 2].find((s) => !kept.includes(s))];
       const gen = randomCompleteHand(rng, kept);
