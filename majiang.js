@@ -140,13 +140,12 @@ const Majiang = (() => {
 
   // ---- 向听数与进张 ----
 
+  // 川麻七对允许 4 张同牌算 2 对（龙七对），对子数按 floor(c/2) 计；
+  // 13 张最多 6 对故不会为负，14 张七对成牌恰好返回 -1。
   function sevenPairsShanten(counts) {
-    let pairs = 0, kinds = 0;
-    for (const c of counts) {
-      if (c >= 2) pairs++;
-      if (c >= 1) kinds++;
-    }
-    return 6 - pairs + Math.max(0, 7 - kinds);
+    let pairs = 0;
+    for (const c of counts) pairs += c >> 1;
+    return 6 - pairs;
   }
 
   // 4 面子 + 1 将的向听数，经典回溯：枚举面子/搭子拆分取最优。

@@ -53,6 +53,14 @@ CHECKS = """
   // 5 对 + 2 单张 = 1 向听（七对路线）
   check("七对 1 向听", M.shanten(
     c("1m","1m","3m","3m","5m","5m","7m","7m","2s","2s","4s","6s","8s")) === 1);
+  // 龙七对：4 张同牌算 2 对。1111m+6m+四个对子摸 6m 即胡，向听应为 0
+  const dragon = c("1m","1m","1m","1m","6m","2s","2s","3s","3s","4s","4s","5s","5s");
+  check("龙七对下叫 = 0", M.shanten(dragon) === 0);
+  const u3 = M.ukeire(dragon, null);
+  check("龙七对进张听 6m", u3.shanten === 0 && u3.tiles.includes("6m") && u3.total >= 3);
+  // 两个 4 张 + 1 对 + 3 单张 = 5 对，1 向听
+  check("双龙七对 1 向听", M.shanten(
+    c("1m","1m","1m","1m","3m","3m","3m","3m","2s","2s","5m","7m","9m")) === 1);
   // 手里有定缺门的刻子也不能用
   const dead = c("1p","1p","1p","4m","5m","6m","7m","8m","9m","1s","1s","1s","2s");
   check("定缺废牌: 不定缺是下叫", M.shanten(dead, null) === 0);
