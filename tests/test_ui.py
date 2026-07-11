@@ -83,6 +83,40 @@ def test_discard_flow(app_page):
     assert page.locator("#result tr").count() == good + 1
 
 
+def test_meld_render(app_page):
+    """副露区渲染：碰 3 张、明杠 4 张、暗杠两端牌背，且不可点击。"""
+    page = app_page
+    page.locator("#tab-ting").click()  # 进练习页以加载脚本环境
+    page.wait_for_selector("#candidates button")
+    html = page.evaluate(
+        "() => meldsEl([{type:'angang',tile:'5m'},{type:'peng',tile:'7s'},"
+        "{type:'gang',tile:'9p'}]).outerHTML")
+    assert html.count('tile back') == 2          # 暗杠两端牌背
+    assert html.count("m5.svg") == 2             # 暗杠中间两张正面
+    assert html.count("s7.svg") == 3             # 碰 3 张正面
+    assert html.count("p9.svg") == 4             # 明杠 4 张正面
+    assert "<button" not in html                 # 副露不可点击
+
+
+def test_meld_problem_flow(app_page):
+    """带副露的下叫题：副露区显示、暗牌排数正确、流程可正常提交。"""
+    page = app_page
+    page.locator("#tab-discard").click()
+    for _ in range(30):  # 普通档约半数题带副露，多刷几题必然命中
+        page.wait_for_selector("#rows > div")
+        if page.locator("#problem .melds .meld").count() > 0:
+            break
+        page.locator("#next").click()
+    melds = page.locator("#problem .melds .meld").count()
+    assert melds >= 1, "30 题未出现副露"
+    hand = page.locator("#rows > div").nth(0).locator("button.tile").count()
+    assert hand == 14 - 3 * melds
+    assert page.locator("#problem .melds button").count() == 0
+    page.locator("#rows > div").last.locator("button.tile").first.click()
+    page.locator("#submit").click()
+    assert page.locator("#verdict").inner_text() != ""
+
+
 def test_settle_flow(app_page):
     page = app_page
     page.locator("#tab-settle").click()
