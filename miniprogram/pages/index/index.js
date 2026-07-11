@@ -22,11 +22,10 @@ function rowsBySuit(tiles) {
   return rows;
 }
 
-// 副露区显示数据：每组标注 碰/明杠/暗杠，全部正面显示（自己视角不盖牌）
+// 副露区显示数据：每组标注 碰/杠，全部正面显示
 function buildMelds(melds) {
-  const names = { peng: "碰", gang: "明杠", angang: "暗杠" };
   return melds.map((meld) => ({
-    label: names[meld.type],
+    label: meld.type === "peng" ? "碰" : "杠",
     tiles: Array.from({ length: meld.type === "peng" ? 3 : 4 },
       () => `/assets/tiles/${meld.tile[1]}${meld.tile[0]}.png`),
   }));

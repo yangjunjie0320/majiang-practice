@@ -83,8 +83,8 @@ CHECKS = """
   check("副露对对胡+杠根", fanA.fan === 4
     && fanA.patterns.includes("对对胡") && fanA.patterns.includes("根x1"));
   const fanB = M.fan(c("1m","2m","3m","4m","5m","6m","5m","5m"),
-    [{ type: "angang", tile: "9m" }, { type: "peng", tile: "7m" }]);
-  check("副露清一色+暗杠根", fanB.fan === 8
+    [{ type: "gang", tile: "9m" }, { type: "peng", tile: "7m" }]);
+  check("副露清一色+杠根", fanB.fan === 8
     && fanB.patterns.includes("清一色") && fanB.patterns.includes("根x1"));
   const fanC = M.fan(c("1m","2m","3m","4m","5m","6m","6s","7s","8s","9s","9s"),
     [{ type: "peng", tile: "7s" }]);
@@ -121,7 +121,7 @@ CHECKS = """
     const m = p.melds.length;
     check(`ting#${k} 张数`, m <= 2 && p.hand.length === 13 - 3 * m);
     check(`ting#${k} 副露类型`, p.melds.every(
-      d => ["peng", "gang", "angang"].includes(d.type)));
+      d => ["peng", "gang"].includes(d.type)));
     const counts = M.countsFromTiles(p.hand);
     const extra = meldsExtra(p.melds);
     check(`ting#${k} 张数上限`, counts.every((c2, i) => c2 + extra[i] <= 4));

@@ -137,15 +137,15 @@ function tileSpan(t, tag = "span") {
   return el;
 }
 
-// 副露区：单独一行，每组浅底色容器并标注 碰/明杠/暗杠；
-// 练习是自己视角，暗杠不盖牌背，全部正面显示；span 不可点击
+// 副露区：单独一行，每组浅底色容器并标注 碰/杠，全部正面显示；
+// span 不可点击
 function meldsEl(melds) {
   const wrap = document.createElement("div");
   wrap.className = "melds";
   melds.forEach(meld => {
     const g = document.createElement("span");
     g.className = "meld";
-    const name = meld.type === "peng" ? "碰" : meld.type === "gang" ? "明杠" : "暗杠";
+    const name = meld.type === "peng" ? "碰" : "杠";
     g.title = `${name} ${fmt(meld.tile)}`;
     const tag = document.createElement("span");
     tag.className = "mtag";

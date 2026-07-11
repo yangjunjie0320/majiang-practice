@@ -115,7 +115,7 @@ const Majiang = (() => {
   }
 
   // 暗牌是否胡牌（要求缺一门，花猪不能胡；门数连副露一起算）。
-  // melds 为副露（碰/明杠/暗杠），暗牌张数须为 14 - 3*副露数；
+  // melds 为副露（碰/杠，杠不分明暗），暗牌张数须为 14 - 3*副露数；
   // 副露只有刻子类，isStandardWin 对任意 3k+2 张通用，无需知道副露。
   function isWin(counts, melds = []) {
     if (counts.reduce((a, b) => a + b, 0) !== 14 - 3 * melds.length) return false;
@@ -326,7 +326,7 @@ const Majiang = (() => {
 
   // 简单/普通档按权重把完整胡牌的刻子翻为副露并从暗牌移除：
   // 门清 0.5 / 一组 0.35 / 两组 0.15；翻后暗牌恰好清零才可升级为杠
-  // （否则同牌超 4 张），碰/明杠/暗杠随机（明暗只影响显示）。
+  // （否则同牌超 4 张）。杠不分明暗。
   function extractMelds(rng, counts, triplets) {
     const r = rng();
     let want = r < 0.5 ? 0 : r < 0.85 ? 1 : 2;
@@ -335,9 +335,7 @@ const Majiang = (() => {
     while (want > 0 && avail.length > 0) {
       const idx = avail.splice(randInt(rng, avail.length), 1)[0];
       counts[idx] -= 3;
-      const type = counts[idx] === 0 && rng() < 0.5
-        ? (rng() < 0.5 ? "gang" : "angang")
-        : "peng";
+      const type = counts[idx] === 0 && rng() < 0.5 ? "gang" : "peng";
       melds.push({ type, tile: indexToTile(idx) });
       want -= 1;
     }
@@ -436,9 +434,7 @@ const Majiang = (() => {
         }
         if (idx < 0) break;
         used.push(idx);
-        const type = counts[idx] === 0 && rng() < 0.5
-          ? (rng() < 0.5 ? "gang" : "angang")
-          : "peng";
+        const type = counts[idx] === 0 && rng() < 0.5 ? "gang" : "peng";
         melds.push({ type, tile: indexToTile(idx) });
       }
       if (melds.length < meldCount) continue;
