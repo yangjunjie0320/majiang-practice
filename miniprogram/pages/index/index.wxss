@@ -21,9 +21,9 @@
 .tile.bad { background: #fadbd8; border-color: #c0392b; }
 .tile.missed { background: #fcf3cf; border-color: #b7950b; }
 
-.melds { display: flex; gap: 24rpx; margin-left: 24rpx; }
-.melds.no-indent { margin-left: 0; }
-.meld { display: flex; gap: 4rpx; }
+.melds { display: flex; flex-wrap: wrap; align-items: center; gap: 24rpx; margin: 8rpx 0; }
+.melds .tag { color: #666; font-size: 26rpx; }
+.meld { display: flex; gap: 4rpx; background: #e8ecef; border-radius: 14rpx; padding: 4rpx 8rpx; }
 .tile.back { background: linear-gradient(#4a7cb0, #35608a); border-color: #2c5177; }
 
 .actions { display: flex; gap: 16rpx; margin: 28rpx 0; }

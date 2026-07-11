@@ -31,8 +31,9 @@
   .tile.good { background: #d4efdf; border-color: #27ae60; }
   .tile.bad { background: #fadbd8; border-color: #c0392b; }
   .tile.missed { background: #fcf3cf; border-color: #b7950b; }
-  .melds { display: inline-flex; gap: 12px; margin-left: 18px; }
-  .meld { display: inline-flex; }
+  .melds { display: flex; align-items: center; gap: 12px; margin: 6px 0; flex-wrap: wrap; }
+  .melds .tag { color: #666; font-size: 0.85em; }
+  .meld { display: inline-flex; background: #e8ecef; border-radius: 9px; padding: 2px 4px; }
   .tile.back { background: linear-gradient(#4a7cb0, #35608a); border-color: #2c5177; }
   .actions { margin: 14px 0; }
   .actions button { font-size: 1em; padding: 8px 20px; cursor: pointer; border-radius: 6px;
@@ -136,10 +137,15 @@ function tileSpan(t, tag = "span") {
   return el;
 }
 
-// 副露区：每组一个容器，碰/明杠正面，暗杠两端牌背；span 不可点击
+// 副露区：单独一行带"副露"标签，每组浅底色容器与手牌区分；
+// 碰/明杠正面，暗杠两端牌背；span 不可点击
 function meldsEl(melds) {
-  const wrap = document.createElement("span");
+  const wrap = document.createElement("div");
   wrap.className = "melds";
+  const tag = document.createElement("span");
+  tag.className = "tag";
+  tag.textContent = "副露";
+  wrap.appendChild(tag);
   melds.forEach(meld => {
     const g = document.createElement("span");
     g.className = "meld";
@@ -203,8 +209,8 @@ function render() {
     box.insertAdjacentHTML("beforeend", '<p class="hint">手牌（已下叫）：</p>');
     const handDiv = document.createElement("div");
     problem.hand.forEach(t => handDiv.appendChild(tileSpan(t)));
-    if (problem.melds.length > 0) handDiv.appendChild(meldsEl(problem.melds));
     box.appendChild(handDiv);
+    if (problem.melds.length > 0) box.appendChild(meldsEl(problem.melds));
     box.insertAdjacentHTML("beforeend", '<p class="hint">点选所有能胡的牌，然后提交：</p>');
     const cand = tileRows(problem.candidates, t => {
       const b = tileSpan(t, "button");
@@ -219,11 +225,7 @@ function render() {
     const meldNote = problem.melds.length > 0 ? "（副露已亮出，不可打）" : "";
     box.insertAdjacentHTML("beforeend",
       `<p class="hint">定缺<b>${SUIT_NAMES[problem.missing_suit]}</b>。选出<b>所有</b>打出后能下叫的打法，每排点选一张${meldNote}：</p>`);
-    if (problem.melds.length > 0) {
-      const md = document.createElement("div");
-      md.appendChild(meldsEl(problem.melds));
-      box.appendChild(md);
-    }
+    if (problem.melds.length > 0) box.appendChild(meldsEl(problem.melds));
     const rows = document.createElement("div");
     rows.id = "rows";
     box.appendChild(rows);
