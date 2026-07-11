@@ -19,11 +19,10 @@
       </view>
     </view>
     <view class="melds" wx:if="{{melds.length > 0}}">
-      <text class="tag">副露</text>
       <view class="meld" wx:for="{{melds}}" wx:for-item="meld" wx:key="index">
-        <view wx:for="{{meld.tiles}}" wx:for-item="t" wx:key="index"
-              class="tile {{t.back ? 'back' : ''}}">
-          <image wx:if="{{!t.back}}" class="face" src="{{t.src}}" mode="aspectFit"/>
+        <text class="mtag">{{meld.label}}</text>
+        <view wx:for="{{meld.tiles}}" wx:for-item="src" wx:key="index" class="tile">
+          <image class="face" src="{{src}}" mode="aspectFit"/>
         </view>
       </view>
     </view>
@@ -39,11 +38,10 @@
   <block wx:elif="{{mode == 'discard'}}">
     <view class="hint">定缺<text class="bold">{{missingName}}</text>。选出<text class="bold">所有</text>打出后能下叫的打法，每排点选一张<text wx:if="{{melds.length > 0}}">（副露已亮出，不可打）</text>：</view>
     <view class="melds" wx:if="{{melds.length > 0}}">
-      <text class="tag">副露</text>
       <view class="meld" wx:for="{{melds}}" wx:for-item="meld" wx:key="index">
-        <view wx:for="{{meld.tiles}}" wx:for-item="t" wx:key="index"
-              class="tile {{t.back ? 'back' : ''}}">
-          <image wx:if="{{!t.back}}" class="face" src="{{t.src}}" mode="aspectFit"/>
+        <text class="mtag">{{meld.label}}</text>
+        <view wx:for="{{meld.tiles}}" wx:for-item="src" wx:key="index" class="tile">
+          <image class="face" src="{{src}}" mode="aspectFit"/>
         </view>
       </view>
     </view>

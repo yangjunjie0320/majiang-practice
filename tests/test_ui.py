@@ -84,17 +84,19 @@ def test_discard_flow(app_page):
 
 
 def test_meld_render(app_page):
-    """副露区渲染：碰 3 张、明杠 4 张、暗杠两端牌背，且不可点击。"""
+    """副露区渲染：每组标注类型、全部正面（碰 3 张、杠 4 张），且不可点击。"""
     page = app_page
     page.locator("#tab-ting").click()  # 进练习页以加载脚本环境
     page.wait_for_selector("#candidates button")
     html = page.evaluate(
         "() => meldsEl([{type:'angang',tile:'5m'},{type:'peng',tile:'7s'},"
         "{type:'gang',tile:'9p'}]).outerHTML")
-    assert html.count('tile back') == 2          # 暗杠两端牌背
-    assert html.count("m5.svg") == 2             # 暗杠中间两张正面
-    assert html.count("s7.svg") == 3             # 碰 3 张正面
-    assert html.count("p9.svg") == 4             # 明杠 4 张正面
+    assert html.count("m5.svg") == 4             # 暗杠 4 张全正面（自己视角不盖牌）
+    assert html.count("s7.svg") == 3             # 碰 3 张
+    assert html.count("p9.svg") == 4             # 明杠 4 张
+    for label in ("暗杠", "碰", "明杠"):          # 每组标注类型
+        assert f">{label}</span>" in html
+    assert "tile back" not in html               # 不再用牌背
     assert "<button" not in html                 # 副露不可点击
 
 

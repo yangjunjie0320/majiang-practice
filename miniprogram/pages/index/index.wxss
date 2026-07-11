@@ -22,9 +22,9 @@
 .tile.missed { background: #fcf3cf; border-color: #b7950b; }
 
 .melds { display: flex; flex-wrap: wrap; align-items: center; gap: 24rpx; margin: 8rpx 0; }
-.melds .tag { color: #666; font-size: 26rpx; }
-.meld { display: flex; gap: 4rpx; background: #e8ecef; border-radius: 14rpx; padding: 4rpx 8rpx; }
-.tile.back { background: linear-gradient(#4a7cb0, #35608a); border-color: #2c5177; }
+.meld { display: flex; align-items: center; gap: 4rpx; background: #e8ecef;
+        border-radius: 14rpx; padding: 4rpx 12rpx 4rpx 8rpx; }
+.meld .mtag { color: #555; font-size: 24rpx; margin-right: 8rpx; }
 
 .actions { display: flex; gap: 16rpx; margin: 28rpx 0; }
 .btn { padding: 16rpx 40rpx; border: 1rpx solid #2c3e50; border-radius: 12rpx;

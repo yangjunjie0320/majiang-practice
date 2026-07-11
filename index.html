@@ -32,9 +32,9 @@
   .tile.bad { background: #fadbd8; border-color: #c0392b; }
   .tile.missed { background: #fcf3cf; border-color: #b7950b; }
   .melds { display: flex; align-items: center; gap: 12px; margin: 6px 0; flex-wrap: wrap; }
-  .melds .tag { color: #666; font-size: 0.85em; }
-  .meld { display: inline-flex; background: #e8ecef; border-radius: 9px; padding: 2px 4px; }
-  .tile.back { background: linear-gradient(#4a7cb0, #35608a); border-color: #2c5177; }
+  .meld { display: inline-flex; align-items: center; background: #e8ecef;
+          border-radius: 9px; padding: 2px 6px 2px 2px; }
+  .meld .mtag { color: #555; font-size: 0.8em; margin: 0 6px 0 4px; }
   .actions { margin: 14px 0; }
   .actions button { font-size: 1em; padding: 8px 20px; cursor: pointer; border-radius: 6px;
                     border: 1px solid #2c3e50; background: #2c3e50; color: #fff; }
@@ -137,31 +137,22 @@ function tileSpan(t, tag = "span") {
   return el;
 }
 
-// 副露区：单独一行带"副露"标签，每组浅底色容器与手牌区分；
-// 碰/明杠正面，暗杠两端牌背；span 不可点击
+// 副露区：单独一行，每组浅底色容器并标注 碰/明杠/暗杠；
+// 练习是自己视角，暗杠不盖牌背，全部正面显示；span 不可点击
 function meldsEl(melds) {
   const wrap = document.createElement("div");
   wrap.className = "melds";
-  const tag = document.createElement("span");
-  tag.className = "tag";
-  tag.textContent = "副露";
-  wrap.appendChild(tag);
   melds.forEach(meld => {
     const g = document.createElement("span");
     g.className = "meld";
     const name = meld.type === "peng" ? "碰" : meld.type === "gang" ? "明杠" : "暗杠";
     g.title = `${name} ${fmt(meld.tile)}`;
+    const tag = document.createElement("span");
+    tag.className = "mtag";
+    tag.textContent = name;
+    g.appendChild(tag);
     const n = meld.type === "peng" ? 3 : 4;
-    for (let i = 0; i < n; i++) {
-      if (meld.type === "angang" && (i === 0 || i === n - 1)) {
-        const back = document.createElement("span");
-        back.className = "tile back";
-        back.title = g.title;
-        g.appendChild(back);
-      } else {
-        g.appendChild(tileSpan(meld.tile));
-      }
-    }
+    for (let i = 0; i < n; i++) g.appendChild(tileSpan(meld.tile));
     wrap.appendChild(g);
   });
   return wrap;
