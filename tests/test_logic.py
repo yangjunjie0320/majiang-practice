@@ -72,6 +72,35 @@ CHECKS = """
     c("1m","2m","3m","4m","5m","6m","7m","8m","1s","2s","5s","5s","9p"), "p");
   check("进张不含定缺门", u2.tiles.every(t => !t.endsWith("p")));
 
+  // ---- 副露（碰/杠）----
+  const pengS = [{ type: "peng", tile: "7s" }];
+  check("副露平胡", M.isWin(c("1m","2m","3m","4m","5m","6m","7m","8m","9m","5s","5s"), pengS));
+  check("副露张数不符不胡", !M.isWin(
+    c("1m","2m","3m","4m","5m","6m","7m","8m","9m","1s","1s","1s","2s","2s"), pengS));
+  check("副露算花猪", !M.isWin(c("1m","2m","3m","4m","5m","6m","7m","8m","9m","5p","5p"), pengS));
+  const fanA = M.fan(c("1m","1m","1m","3m","3m","3m","5m","5m"),
+    [{ type: "peng", tile: "7s" }, { type: "gang", tile: "9s" }]);
+  check("副露对对胡+杠根", fanA.fan === 4
+    && fanA.patterns.includes("对对胡") && fanA.patterns.includes("根x1"));
+  const fanB = M.fan(c("1m","2m","3m","4m","5m","6m","5m","5m"),
+    [{ type: "angang", tile: "9m" }, { type: "peng", tile: "7m" }]);
+  check("副露清一色+暗杠根", fanB.fan === 8
+    && fanB.patterns.includes("清一色") && fanB.patterns.includes("根x1"));
+  const fanC = M.fan(c("1m","2m","3m","4m","5m","6m","6s","7s","8s","9s","9s"),
+    [{ type: "peng", tile: "7s" }]);
+  check("碰加手内一张算根", fanC.fan === 2 && fanC.patterns.includes("根x1"));
+  check("副露向听: 差将对", M.shanten(
+    c("1m","2m","3m","4m","5m","6m","1s","1s","1s","2s"), null, 1) === 0);
+  check("副露不能七对", M.shanten(
+    c("1m","1m","3m","3m","5m","5m","7m","7m","9m","9m"), null, 1) > 0);
+  const u4 = M.ukeire(c("1m","2m","3m","4m","5m","6m","3s","4s","9s","9s"), null,
+    [{ type: "peng", tile: "5s" }]);
+  check("副露进张扣除碰占的枚数", u4.shanten === 0 && u4.tiles.includes("2s")
+    && u4.tiles.includes("5s") && u4.total === 5);
+  const u5 = M.ukeire(c("1m","2m","3m","4m","5m","6m","7m","8m","9m","5s"), null,
+    [{ type: "peng", tile: "5s" }]);
+  check("被副露占满的听是形式听牌", u5.shanten === 0 && u5.total === 0);
+
   // ---- 出题器不变量（种子随机数保证可复现）----
   const mulberry32 = a => () => {
     a |= 0; a = (a + 0x6D2B79F5) | 0;
@@ -80,42 +109,96 @@ CHECKS = """
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 
+  const meldsExtra = (melds) => {
+    const extra = new Array(27).fill(0);
+    melds.forEach(d => { extra[M.tileIndex(d.tile)] += d.type === "peng" ? 3 : 4; });
+    return extra;
+  };
+
   const rng1 = mulberry32(42);
   for (let k = 0; k < 20; k++) {
     const p = M.makeTingProblem(rng1);
-    check(`ting#${k} 13张`, p.hand.length === 13);
+    const m = p.melds.length;
+    check(`ting#${k} 张数`, m <= 2 && p.hand.length === 13 - 3 * m);
+    check(`ting#${k} 副露类型`, p.melds.every(
+      d => ["peng", "gang", "angang"].includes(d.type)));
     const counts = M.countsFromTiles(p.hand);
-    check(`ting#${k} ≤2门`, M.suitsIn(counts).size <= 2);
+    const extra = meldsExtra(p.melds);
+    check(`ting#${k} 张数上限`, counts.every((c2, i) => c2 + extra[i] <= 4));
+    const suits = M.suitsIn(counts);
+    p.melds.forEach(d => suits.add(d.tile[1]));
+    check(`ting#${k} ≤2门`, suits.size <= 2);
     check(`ting#${k} 有答案`, p.answer.hu_tiles.length > 0);
-    for (const h of p.answer.hu_tiles) {
-      counts[M.tileIndex(h.tile)] += 1;
-      check(`ting#${k} ${h.tile} 真胡`, M.isWin(counts));
-      check(`ting#${k} ${h.tile} 倍数≥1`, h.fan >= 1);
-      counts[M.tileIndex(h.tile)] -= 1;
+    // 穷举所有可摸的牌，胡牌集合必须与答案完全相等
+    const ans = new Set(p.answer.hu_tiles.map(h => h.tile));
+    for (let i = 0; i < 27; i++) {
+      if (counts[i] + extra[i] >= 4) continue;
+      counts[i] += 1;
+      const win = M.isWin(counts, p.melds);
+      counts[i] -= 1;
+      check(`ting#${k} 答案完备 ${M.indexToTile(i)}`,
+        win === ans.has(M.indexToTile(i)));
     }
+    for (const h of p.answer.hu_tiles) check(`ting#${k} ${h.tile} 倍数≥1`, h.fan >= 1);
   }
 
   const rng2 = mulberry32(7);
   for (let k = 0; k < 10; k++) {
     const p = M.makeDiscardProblem(rng2);
-    check(`discard#${k} 14张`, p.hand.length === 14);
+    const m = p.melds.length;
+    check(`discard#${k} 张数`, m <= 2 && p.hand.length === 14 - 3 * m);
     check(`discard#${k} 有答案`, p.answer.best.length > 0);
     check(`discard#${k} 答案在手牌中`, p.answer.best.every(t => p.hand.includes(t)));
-    check(`discard#${k} 不含定缺门`, p.hand.every(t => !t.endsWith(p.missing_suit)));
+    check(`discard#${k} 不含定缺门`, p.hand.every(t => !t.endsWith(p.missing_suit))
+      && p.melds.every(d => !d.tile.endsWith(p.missing_suit)));
     const counts = M.countsFromTiles(p.hand);
-    check(`discard#${k} ≤2门`, M.suitsIn(counts).size <= 2);
-    for (const d of p.answer.detail) {
-      check(`discard#${k} 打${d.tile} 枚数>0`, d.count > 0);
-      counts[M.tileIndex(d.tile)] -= 1;
-      check(`discard#${k} 打${d.tile} 即下叫`, M.shanten(counts, p.missing_suit) === 0);
-      for (const w of d.waits) {
-        counts[M.tileIndex(w)] += 1;
-        check(`discard#${k} 打${d.tile} 听${w} 真胡`, M.isWin(counts));
-        counts[M.tileIndex(w)] -= 1;
+    const extra = meldsExtra(p.melds);
+    check(`discard#${k} 张数上限`, counts.every((c2, i) => c2 + extra[i] <= 4));
+    // 穷举所有弃牌×摸牌（isWin 直判），必须与答案集合完全相等
+    const ref = [];
+    for (let x = 0; x < 27; x++) {
+      if (counts[x] === 0) continue;
+      counts[x] -= 1;
+      const waits = [];
+      let total = 0;
+      for (let w = 0; w < 27; w++) {
+        if (counts[w] + extra[w] >= 4) continue;
+        counts[w] += 1;
+        if (M.isWin(counts, p.melds)) {
+          waits.push(M.indexToTile(w));
+          total += 4 - extra[w] - (counts[w] - 1);
+        }
+        counts[w] -= 1;
       }
-      counts[M.tileIndex(d.tile)] += 1;
+      counts[x] += 1;
+      if (waits.length > 0) ref.push({ tile: M.indexToTile(x), waits, count: total });
     }
+    const norm = (a) => JSON.stringify([...a]
+      .sort((u, v) => M.tileIndex(u.tile) - M.tileIndex(v.tile))
+      .map(d => [d.tile, [...d.waits].sort(), d.count]));
+    check(`discard#${k} 答案与穷举一致`, norm(ref) === norm(p.answer.detail));
   }
+
+  // ---- 困难档副露题池 ----
+  const rng4 = mulberry32(2024);
+  let pooledT = 0;
+  for (let k = 0; k < 60 && pooledT < 3; k++) {
+    const p = M.makeTingProblem(rng4, "hard");
+    if (p.melds.length === 0) continue;
+    pooledT += 1;
+    check(`pool-ting#${pooledT} 答案数≥4`, p.answer.hu_tiles.length >= 4);
+    check(`pool-ting#${pooledT} 张数`, p.hand.length === 13 - 3 * p.melds.length);
+  }
+  check("听牌题池命中≥3", pooledT >= 3);
+  let pooledD = 0;
+  for (let k = 0; k < 30 && pooledD < 2; k++) {
+    const p = M.makeDiscardProblem(rng4, "hard");
+    if (p.melds.length === 0) continue;
+    pooledD += 1;
+    check(`pool-discard#${pooledD} 答案数≥5`, p.answer.best.length >= 5);
+    check(`pool-discard#${pooledD} 张数`, p.hand.length === 14 - 3 * p.melds.length);
+  }
+  check("下叫题池命中≥2", pooledD >= 2);
 
   // ---- 难度分档：答案数必须落在档位内 ----
   const rng3 = mulberry32(99);
@@ -149,6 +232,18 @@ CHECKS = """
 
 def test_logic(page):
     page.goto("about:blank")
+    page.add_script_tag(path=str(ROOT / "assets" / "pools.js"))
     page.add_script_tag(path=str(ROOT / "majiang.js"))
     fails = page.evaluate(CHECKS)
     assert fails == [], "\n".join(fails)
+
+
+def test_pool_sizes(page):
+    """题池与离线枚举的困难题数量一致（见 scripts/gen_pools.py）。"""
+    page.goto("about:blank")
+    page.add_script_tag(path=str(ROOT / "assets" / "pools.js"))
+    page.add_script_tag(path=str(ROOT / "majiang.js"))
+    sizes = page.evaluate(
+        "() => ['ting1','ting2','discard1','discard2']"
+        ".map(k => Majiang.decodePool(k).length)")
+    assert sizes == [4422, 150, 33898, 188]

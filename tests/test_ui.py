@@ -26,7 +26,7 @@ def test_ting_flow(app_page):
     page = app_page
     page.locator("#tab-ting").click()
     page.wait_for_selector("#candidates button")
-    assert page.locator("#problem .tile").count() >= 13
+    assert page.locator("#problem .tile").count() >= 7  # 副露后暗牌 7-13 张
     page.locator("#candidates button").nth(0).click()
     page.locator("#submit").click()
     assert page.locator("#verdict").inner_text() != ""
@@ -52,7 +52,8 @@ def test_discard_flow(app_page):
     page.locator("#tab-discard").click()
     page.wait_for_selector("#rows > div")
     assert page.locator("#rows > div").count() == 1  # 初始只有一排待选
-    assert page.locator("#rows > div").nth(0).locator("button.tile").count() == 14
+    # 副露 0-2 组时暗牌 14/11/8 张
+    assert page.locator("#rows > div").nth(0).locator("button.tile").count() in (8, 11, 14)
 
     # 在待选排里每种牌各选一次：每选一张下方多出一排
     tiles = page.eval_on_selector(

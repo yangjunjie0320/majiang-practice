@@ -37,7 +37,7 @@ HARNESS = """
 
   // 已下叫模式：全选正确答案应判对
   inst.switchMode({ currentTarget: { dataset: { mode: "ting" } } });
-  check("ting 手牌 13", inst.data.hand.length === 13);
+  check("ting 手牌张数", inst.data.hand.length === 13 - 3 * inst.problem.melds.length);
   check("ting 有候选", flat(inst.data.candidateRows).length >= 9);
   check("候选牌花色分行", inst.data.candidateRows.every(
     (row) => row.every((c) => c.suit === row[0].suit)));
@@ -53,7 +53,8 @@ HARNESS = """
   inst.setData({ mode: "discard" });
   inst.newProblem();
   check("discard 初始一排", inst.data.rows.length === 1);
-  check("discard 每排 14 张", inst.data.rows[0].tiles.length === 14);
+  check("discard 每排张数", inst.data.rows[0].tiles.length
+    === 14 - 3 * inst.problem.melds.length);
   check("discard 定缺名", ["万", "条", "筒"].includes(inst.data.missingName));
   const best = inst.problem.answer.best;
   best.forEach((t, k) => {
