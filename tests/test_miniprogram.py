@@ -6,9 +6,12 @@ ROOT = Path(__file__).parent.parent
 
 
 def test_majiang_js_copies_in_sync():
-    assert (ROOT / "majiang.js").read_text() == (
-        ROOT / "miniprogram" / "majiang.js"
-    ).read_text(), "miniprogram/majiang.js 与根目录 majiang.js 不一致，请重新复制"
+    for src, dst in [
+        (ROOT / "majiang.js", ROOT / "miniprogram" / "majiang.js"),
+        (ROOT / "assets" / "pools.js", ROOT / "miniprogram" / "pools.js"),
+    ]:
+        assert src.read_text() == dst.read_text(), (
+            f"{dst.relative_to(ROOT)} 与 {src.relative_to(ROOT)} 不一致，请重新复制")
 
 
 HARNESS = """
@@ -38,6 +41,9 @@ HARNESS = """
   // 已下叫模式：全选正确答案应判对
   inst.switchMode({ currentTarget: { dataset: { mode: "ting" } } });
   check("ting 手牌张数", inst.data.hand.length === 13 - 3 * inst.problem.melds.length);
+  check("副露显示数据", inst.data.melds.length === inst.problem.melds.length
+    && inst.data.melds.every((g, i) => g.tiles.length
+       === (inst.problem.melds[i].type === "peng" ? 3 : 4)));
   check("ting 有候选", flat(inst.data.candidateRows).length >= 9);
   check("候选牌花色分行", inst.data.candidateRows.every(
     (row) => row.every((c) => c.suit === row[0].suit)));
@@ -48,6 +54,11 @@ HARNESS = """
   check("ting 结果行数", inst.data.tingRows.length === correct.size);
   check("ting 标注 good", flat(inst.data.candidateRows)
     .filter((c) => c.mark === "good").length === correct.size);
+
+  // 答完题切到结账页，不应残留判定和结果（判定区在模式区块之外）
+  inst.switchMode({ currentTarget: { dataset: { mode: "settle" } } });
+  check("切结账清残留", inst.data.verdict === "" && inst.data.tingRows.length === 0
+    && inst.data.footnote === "");
 
   // 未下叫模式：每排选一张，选齐所有下叫打法应判对
   inst.setData({ mode: "discard" });

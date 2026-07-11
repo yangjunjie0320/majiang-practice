@@ -21,6 +21,11 @@
 .tile.bad { background: #fadbd8; border-color: #c0392b; }
 .tile.missed { background: #fcf3cf; border-color: #b7950b; }
 
+.melds { display: flex; gap: 24rpx; margin-left: 24rpx; }
+.melds.no-indent { margin-left: 0; }
+.meld { display: flex; gap: 4rpx; }
+.tile.back { background: linear-gradient(#4a7cb0, #35608a); border-color: #2c5177; }
+
 .actions { display: flex; gap: 16rpx; margin: 28rpx 0; }
 .btn { padding: 16rpx 40rpx; border: 1rpx solid #2c3e50; border-radius: 12rpx;
        background: #fff; color: #2c3e50; font-size: 30rpx; }

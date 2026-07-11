@@ -22,11 +22,34 @@ function rowsBySuit(tiles) {
   return rows;
 }
 
+// 副露区显示数据：碰/明杠全正面，暗杠两端牌背
+function buildMelds(melds) {
+  return melds.map((meld) => {
+    const n = meld.type === "peng" ? 3 : 4;
+    const tiles = [];
+    for (let i = 0; i < n; i++) {
+      const back = meld.type === "angang" && (i === 0 || i === n - 1);
+      tiles.push({
+        back,
+        src: back ? "" : `/assets/tiles/${meld.tile[1]}${meld.tile[0]}.png`,
+      });
+    }
+    return { tiles };
+  });
+}
+
+function generate(mode, difficulty) {
+  return mode === "ting"
+    ? Majiang.makeTingProblem(Math.random, difficulty)
+    : Majiang.makeDiscardProblem(Math.random, difficulty);
+}
+
 Page({
   data: {
     mode: "settle",
     difficulty: "normal",
     hand: [],
+    melds: [],
     candidateRows: [],
     rows: [],
     missingName: "",
@@ -52,7 +75,16 @@ Page({
 
   switchMode(e) {
     const mode = e.currentTarget.dataset.mode;
-    this.setData({ mode });
+    // 判定和结果区域在模式区块之外，切页（尤其切到结账）要清掉旧答案
+    this.setData({
+      mode,
+      answered: false,
+      verdict: "",
+      verdictOk: false,
+      tingRows: [],
+      discardRows: [],
+      footnote: "",
+    });
     if (mode !== "settle") this.newProblem();
   },
 
@@ -61,15 +93,34 @@ Page({
     this.newProblem();
   },
 
+  // 出完当前题就在后台把下一题先算好，点"下一题"零等待；
+  // 切换模式或难度后缓存对不上号，自然失效重新生成
+  schedulePrefetch() {
+    const { mode, difficulty } = this.data;
+    setTimeout(() => {
+      if (this.data.mode === mode && this.data.difficulty === difficulty
+          && !(this.prefetch && this.prefetch.mode === mode
+               && this.prefetch.difficulty === difficulty)) {
+        this.prefetch = { mode, difficulty, problem: generate(mode, difficulty) };
+      }
+    }, 50);
+  },
+
   newProblem() {
     const { mode, difficulty } = this.data;
-    const p = mode === "ting"
-      ? Majiang.makeTingProblem(Math.random, difficulty)
-      : Majiang.makeDiscardProblem(Math.random, difficulty);
+    let p;
+    if (this.prefetch && this.prefetch.mode === mode
+        && this.prefetch.difficulty === difficulty) {
+      p = this.prefetch.problem;
+      this.prefetch = null;
+    } else {
+      p = generate(mode, difficulty);
+    }
     this.problem = p;
     this.discardPicks = [];
     this.setData({
       hand: p.hand.map(deco),
+      melds: buildMelds(p.melds),
       candidateRows: mode === "ting" ? rowsBySuit(p.candidates) : [],
       missingName: mode === "discard" ? Majiang.SUIT_NAMES[p.missing_suit] : "",
       rows: mode === "discard" ? this.buildDiscardRows(false) : [],
@@ -80,6 +131,7 @@ Page({
       discardRows: [],
       footnote: "",
     });
+    this.schedulePrefetch();
   },
 
   toggleTile(e) {

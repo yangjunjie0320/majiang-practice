@@ -17,6 +17,14 @@
       <view wx:for="{{hand}}" wx:key="index" class="tile">
         <image class="face" src="{{item.src}}" mode="aspectFit"/>
       </view>
+      <view class="melds" wx:if="{{melds.length > 0}}">
+        <view class="meld" wx:for="{{melds}}" wx:for-item="meld" wx:key="index">
+          <view wx:for="{{meld.tiles}}" wx:for-item="t" wx:key="index"
+                class="tile {{t.back ? 'back' : ''}}">
+            <image wx:if="{{!t.back}}" class="face" src="{{t.src}}" mode="aspectFit"/>
+          </view>
+        </view>
+      </view>
     </view>
     <view class="hint">点选所有能胡的牌，然后提交：</view>
     <view wx:for="{{candidateRows}}" wx:for-item="row" wx:for-index="r" wx:key="r" class="tiles">
@@ -28,7 +36,17 @@
   </block>
 
   <block wx:elif="{{mode == 'discard'}}">
-    <view class="hint">定缺<text class="bold">{{missingName}}</text>，摸牌后 14 张。选出<text class="bold">所有</text>打出后能下叫的打法，每排点选一张：</view>
+    <view class="hint">定缺<text class="bold">{{missingName}}</text>。选出<text class="bold">所有</text>打出后能下叫的打法，每排点选一张<text wx:if="{{melds.length > 0}}">（副露已亮出，不可打）</text>：</view>
+    <view class="tiles" wx:if="{{melds.length > 0}}">
+      <view class="melds no-indent">
+        <view class="meld" wx:for="{{melds}}" wx:for-item="meld" wx:key="index">
+          <view wx:for="{{meld.tiles}}" wx:for-item="t" wx:key="index"
+                class="tile {{t.back ? 'back' : ''}}">
+            <image wx:if="{{!t.back}}" class="face" src="{{t.src}}" mode="aspectFit"/>
+          </view>
+        </view>
+      </view>
+    </view>
     <block wx:for="{{rows}}" wx:for-item="row" wx:for-index="r" wx:key="r">
       <view class="hint">{{row.label}}</view>
       <view class="tiles">
