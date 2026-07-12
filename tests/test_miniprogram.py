@@ -128,6 +128,7 @@ HARNESS = """
 
 def test_page_logic(page):
     page.goto("about:blank")
+    page.add_script_tag(path=str(ROOT / "miniprogram" / "pools.js"))
     page.add_script_tag(path=str(ROOT / "miniprogram" / "majiang.js"))
     src = (ROOT / "miniprogram" / "pages" / "index" / "index.js").read_text()
     fails = page.evaluate(HARNESS, src)

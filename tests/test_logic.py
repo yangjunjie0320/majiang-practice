@@ -119,7 +119,7 @@ CHECKS = """
   for (let k = 0; k < 20; k++) {
     const p = M.makeTingProblem(rng1);
     const m = p.melds.length;
-    check(`ting#${k} 张数`, m <= 2 && p.hand.length === 13 - 3 * m);
+    check(`ting#${k} 张数`, m <= 4 && p.hand.length === 13 - 3 * m);
     check(`ting#${k} 副露类型`, p.melds.every(
       d => ["peng", "gang"].includes(d.type)));
     const counts = M.countsFromTiles(p.hand);
@@ -146,7 +146,7 @@ CHECKS = """
   for (let k = 0; k < 10; k++) {
     const p = M.makeDiscardProblem(rng2);
     const m = p.melds.length;
-    check(`discard#${k} 张数`, m <= 2 && p.hand.length === 14 - 3 * m);
+    check(`discard#${k} 张数`, m <= 4 && p.hand.length === 14 - 3 * m);
     check(`discard#${k} 有答案`, p.answer.best.length > 0);
     check(`discard#${k} 答案在手牌中`, p.answer.best.every(t => p.hand.includes(t)));
     check(`discard#${k} 不含定缺门`, p.hand.every(t => !t.endsWith(p.missing_suit))
@@ -246,12 +246,26 @@ def test_logic(page):
     assert fails == [], "\n".join(fails)
 
 
-def test_pool_sizes(page):
-    """题池与离线枚举的困难题数量一致（见 scripts/gen_pools.py）。"""
+def test_bank_cells(page):
+    """题库分格完整性：总量、封顶与代表格大小（见 scripts/gen_pools.py）。"""
     page.goto("about:blank")
     page.add_script_tag(path=str(ROOT / "assets" / "pools.js"))
     page.add_script_tag(path=str(ROOT / "majiang.js"))
-    sizes = page.evaluate(
-        "() => ['ting1','ting2','discard1','discard2']"
-        ".map(k => Majiang.decodePool(k).length)")
-    assert sizes == [4422, 150, 33898, 188]
+    stats = page.evaluate("""() => {
+      const sizes = {};
+      let t = 0, d = 0, over = 0;
+      for (const k of Object.keys(MajiangPools)) {
+        const n = Majiang.decodePool(k).length;
+        sizes[k] = n;
+        if (n > 100) over += 1;
+        if (k[0] === 't') t += n; else d += n;
+      }
+      return { t, d, over, sizes };
+    }""")
+    assert stats["over"] == 0  # 每格封顶 100
+    assert (stats["t"], stats["d"]) == (2030, 2370)
+    # 不足 100 的格子全收（与枚举全集一致）
+    for key, n in [("t_0_9", 2), ("t_0_8", 96), ("t_4_1", 18), ("t_2_5", 22),
+                   ("t_3_3", 24), ("d_4_2", 100), ("d_3_4", 10), ("d_1_7", 56),
+                   ("d_2_6", 4)]:
+        assert stats["sizes"][key] == n, (key, stats["sizes"][key])

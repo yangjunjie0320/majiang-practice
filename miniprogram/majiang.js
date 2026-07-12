@@ -253,10 +253,9 @@ const Majiang = (() => {
     return { shanten: base, tiles, total };
   }
 
-  // ---- 出题（逆向法：从完整胡牌出发构造题目）----
+  // ---- 出题（题库式：全集离线枚举按格抽样，运行时查表抽题）----
 
-  // 难度分档：按答案数量（能胡几张 / 几种下叫打法）划定范围，
-  // 依据 400 题抽样分布，各档占比 15%-45%。
+  // 难度分档：按答案数量（能胡几张 / 几种下叫打法）划定范围。
   const DIFFICULTY = {
     ting: { easy: [1, 2], normal: [3, 3], hard: [4, Infinity] },
     discard: { easy: [1, 2], normal: [3, 4], hard: [5, Infinity] },
@@ -271,82 +270,11 @@ const Majiang = (() => {
     return Math.floor(rng() * n);
   }
 
-  function choice(rng, arr) {
-    return arr[randInt(rng, arr.length)];
-  }
+  // ---- 题库（assets/pools.js，scripts/gen_pools.py 离线枚举生成）----
+  // 每格 = (模式 t/d, 副露数 m, 胡法数量 n) 的暗牌形样本（<=100，
+  // 固定万/条两门）。出题 = 查权重表抽格 → 洗牌袋抽形 → 置换花色配副露。
 
-  function sampleTwoSuits(rng) {
-    const suits = [0, 1, 2];
-    suits.splice(randInt(rng, 3), 1);
-    return suits;
-  }
-
-  // 生成一副缺一门的 14 张胡牌计数及其中刻子的位置（可翻为副露），
-  // 失败返回 null。七对手没有刻子（有副露不能七对）。
-  function randomCompleteHand(rng, suits = null) {
-    suits = suits || sampleTwoSuits(rng);
-    const counts = new Array(27).fill(0);
-    const triplets = [];
-
-    function add(idx, n) {
-      if (counts[idx] + n > 4) return false;
-      counts[idx] += n;
-      return true;
-    }
-
-    if (rng() < 0.25) {
-      // 七对：偶尔用同牌 4 张凑成龙七对
-      let need = 7;
-      while (need > 0) {
-        const idx = choice(rng, suits) * 9 + randInt(rng, 9);
-        let take = need === 1 || rng() < 0.8 ? 2 : 4;
-        take = Math.min(take, need * 2);
-        if (add(idx, take)) need -= take / 2;
-      }
-      return { counts, triplets };
-    }
-
-    // 4 面子 + 1 将
-    if (!add(choice(rng, suits) * 9 + randInt(rng, 9), 2)) return null;
-    for (let k = 0; k < 4; k++) {
-      const s = choice(rng, suits);
-      let ok;
-      if (rng() < 0.5) {
-        const start = s * 9 + randInt(rng, 7);
-        ok = add(start, 1) && add(start + 1, 1) && add(start + 2, 1);
-      } else {
-        const idx = s * 9 + randInt(rng, 9);
-        ok = add(idx, 3);
-        if (ok) triplets.push(idx);
-      }
-      if (!ok) return null;
-    }
-    return { counts, triplets };
-  }
-
-  // 简单/普通档按权重把完整胡牌的刻子翻为副露并从暗牌移除：
-  // 门清 0.5 / 一组 0.35 / 两组 0.15；翻后暗牌恰好清零才可升级为杠
-  // （否则同牌超 4 张）。杠不分明暗。
-  function extractMelds(rng, counts, triplets) {
-    const r = rng();
-    let want = r < 0.5 ? 0 : r < 0.85 ? 1 : 2;
-    const avail = triplets.slice();
-    const melds = [];
-    while (want > 0 && avail.length > 0) {
-      const idx = avail.splice(randInt(rng, avail.length), 1)[0];
-      counts[idx] -= 3;
-      const type = counts[idx] === 0 && rng() < 0.5 ? "gang" : "peng";
-      melds.push({ type, tile: indexToTile(idx) });
-      want -= 1;
-    }
-    return melds;
-  }
-
-  // ---- 副露困难题池（assets/pools.js，scripts/gen_pools.py 生成）----
-  // 带副露的困难题命中率过低（2 组仅 0.1%），拒绝采样会空转，
-  // 改为全枚举的静态池：抽暗牌形 → 配副露 → 重算答案校验档位 → 置换花色。
-
-  let poolsSource; // undefined = 未探测；null = 不可用（此时困难档退回门清生成）
+  let poolsSource; // undefined = 未探测；null = 不可用
   const poolCache = {};
 
   function getPoolsSource() {
@@ -401,70 +329,130 @@ const Majiang = (() => {
     return list;
   }
 
-  // 困难档带副露的题：池存 万/条 两门的暗牌形，这里随机置换花色、
-  // 随机配副露（碰需该牌暗牌 ≤1、杠需 0），再按副露上下文重算答案——
-  // 副露可能占满某个所听的牌导致答案数掉出困难档，掉档则重抽。
-  // 池不可用（未加载 pools.js）返回 null，调用方退回生成器。
-  function poolProblem(rng, mode, meldCount) {
-    const list = decodePool(mode + meldCount);
-    if (!list || list.length === 0) return null;
-    for (let tries = 0; tries < 30; tries++) {
-      const perm = [0, 1, 2];
-      for (let i = 2; i > 0; i--) {
+  // 副露 0-4 组的目标出题比例（贴近实战：碰杠常见、门清少数），一处可调。
+  const MELD_WEIGHTS = [30, 35, 25, 8, 2];
+  // 各难度档内胡法数量的权重；稀有大听口给低权重，避免高频撞脸。
+  const TIER_N = {
+    ting: {
+      easy: { 1: 50, 2: 50 },
+      normal: { 3: 100 },
+      hard: { 4: 40, 5: 30, 6: 15, 7: 8, 8: 5, 9: 2 },
+    },
+    discard: {
+      easy: { 1: 50, 2: 50 },
+      normal: { 3: 60, 4: 40 },
+      hard: { 5: 55, 6: 30, 7: 10, 8: 5 },
+    },
+  };
+
+  function weightedPick(rng, table) {
+    const keys = Object.keys(table);
+    let sum = 0;
+    for (const k of keys) sum += table[k];
+    let r = rng() * sum;
+    for (const k of keys) {
+      r -= table[k];
+      if (r < 0) return Number(k);
+    }
+    return Number(keys[keys.length - 1]);
+  }
+
+  // 洗牌袋：每格无放回发题、发完自动重洗——一轮内绝无重复且间隔最大，
+  // 比"随机+已做退避"省状态且无拒绝开销。会话内存态，不跨会话记录。
+  const bags = {};
+  function bagDraw(rng, key, list) {
+    let bag = bags[key];
+    if (!bag || bag.pos >= bag.order.length) {
+      const order = list.map((_, i) => i);
+      for (let i = order.length - 1; i > 0; i--) {
         const j = randInt(rng, i + 1);
-        const t = perm[i];
-        perm[i] = perm[j];
-        perm[j] = t;
+        const t = order[i];
+        order[i] = order[j];
+        order[j] = t;
       }
-      const counts = new Array(27).fill(0);
-      let x = list[randInt(rng, list.length)];
-      for (let i = 0; i < 18; i++) {
-        const c = x % 5;
-        x = (x - c) / 5;
-        if (c > 0) counts[perm[Math.floor(i / 9)] * 9 + (i % 9)] = c;
+      bag = bags[key] = { order, pos: 0 };
+    }
+    const v = list[bag.order[bag.pos]];
+    bag.pos += 1;
+    return v;
+  }
+
+  // 由一个暗牌形构造题目：随机置换花色、随机配副露（碰需该牌暗牌 ≤1 张、
+  // 杠需 0 张），再按副露上下文重算答案。副露可能占满某个所听的牌，
+  // 答案数掉出难度档时返回 null 由调用方重抽。
+  function buildProblem(rng, mode, meldCount, enc, tier) {
+    const perm = [0, 1, 2];
+    for (let i = 2; i > 0; i--) {
+      const j = randInt(rng, i + 1);
+      const t = perm[i];
+      perm[i] = perm[j];
+      perm[j] = t;
+    }
+    const counts = new Array(27).fill(0);
+    let x = enc;
+    for (let i = 0; i < 18; i++) {
+      const c = x % 5;
+      x = (x - c) / 5;
+      if (c > 0) counts[perm[Math.floor(i / 9)] * 9 + (i % 9)] = c;
+    }
+    const melds = [];
+    const used = [];
+    for (let k = 0; k < meldCount; k++) {
+      let idx = -1;
+      for (let t = 0; t < 50 && idx < 0; t++) {
+        const cand = perm[randInt(rng, 2)] * 9 + randInt(rng, 9);
+        if (counts[cand] <= 1 && used.indexOf(cand) < 0) idx = cand;
       }
-      const missingSuit = SUITS[perm[2]];
-      const melds = [];
-      const used = [];
-      for (let k = 0; k < meldCount; k++) {
-        let idx = -1;
-        for (let t = 0; t < 50 && idx < 0; t++) {
-          const cand = perm[randInt(rng, 2)] * 9 + randInt(rng, 9);
-          if (counts[cand] <= 1 && used.indexOf(cand) < 0) idx = cand;
-        }
-        if (idx < 0) break;
-        used.push(idx);
-        const type = counts[idx] === 0 && rng() < 0.5 ? "gang" : "peng";
-        melds.push({ type, tile: indexToTile(idx) });
-      }
-      if (melds.length < meldCount) continue;
-      if (mode === "ting") {
-        const tiles = huTiles(counts, melds);
-        if (!inRange(tiles.length, "ting", "hard")) continue;
-        const handSuits = [...new Set(
-          counts.flatMap((c, i) => (c > 0 ? [Math.floor(i / 9)] : []))
-        )].sort();
-        return {
-          mode: "ting",
-          hand: sortTiles(tilesFromCounts(counts)),
-          melds,
-          candidates: handSuits.flatMap((s) =>
-            Array.from({ length: 9 }, (_, r) => indexToTile(s * 9 + r))),
-          answer: { hu_tiles: tiles },
-        };
-      }
-      const options = tingOptions(counts, missingSuit, melds);
-      if (!inRange(options.length, "discard", "hard")) continue;
-      options.sort((a, b) => b.count - a.count);
+      if (idx < 0) return null;
+      used.push(idx);
+      const type = counts[idx] === 0 && rng() < 0.5 ? "gang" : "peng";
+      melds.push({ type, tile: indexToTile(idx) });
+    }
+    if (mode === "ting") {
+      const tiles = huTiles(counts, melds);
+      if (!inRange(tiles.length, "ting", tier)) return null;
+      const handSuits = [...new Set(
+        counts.flatMap((c, i) => (c > 0 ? [Math.floor(i / 9)] : []))
+      )].sort();
       return {
-        mode: "discard",
+        mode: "ting",
         hand: sortTiles(tilesFromCounts(counts)),
         melds,
-        missing_suit: missingSuit,
-        answer: { best: options.map((d) => d.tile), detail: options },
+        candidates: handSuits.flatMap((s) =>
+          Array.from({ length: 9 }, (_, r) => indexToTile(s * 9 + r))),
+        answer: { hu_tiles: tiles },
       };
     }
-    return null;
+    const missingSuit = SUITS[perm[2]];
+    const options = tingOptions(counts, missingSuit, melds);
+    if (!inRange(options.length, "discard", tier)) return null;
+    options.sort((a, b) => b.count - a.count);
+    return {
+      mode: "discard",
+      hand: sortTiles(tilesFromCounts(counts)),
+      melds,
+      missing_suit: missingSuit,
+      answer: { best: options.map((d) => d.tile), detail: options },
+    };
+  }
+
+  // 出题：难度 → 档内胡法数量 → 副露数（权重在该胡法数非空的格上归一）
+  // → 洗牌袋抽形。未指定难度按普通档。
+  function drawProblem(rng, mode, difficulty) {
+    if (!getPoolsSource()) throw new Error("题库未加载：请先引入 pools.js");
+    const tier = TIER_N[mode][difficulty] ? difficulty : "normal";
+    const letter = mode === "ting" ? "t" : "d";
+    for (;;) {
+      const n = weightedPick(rng, TIER_N[mode][tier]);
+      const mw = {};
+      for (let m = 0; m <= 4; m++) {
+        if (decodePool(`${letter}_${m}_${n}`)) mw[m] = MELD_WEIGHTS[m];
+      }
+      const m = weightedPick(rng, mw);
+      const key = `${letter}_${m}_${n}`;
+      const p = buildProblem(rng, mode, m, bagDraw(rng, key, decodePool(key)), tier);
+      if (p) return p; // 配副露掉档时重抽（罕见）
+    }
   }
 
   // 13-3m 张暗牌能胡的所有牌及倍数。胡的牌必须能补全暗牌结构，
@@ -489,56 +477,9 @@ const Majiang = (() => {
     return result;
   }
 
-  // 已下叫题：枚举去掉一张暗牌的所有方式。指定难度时按答案数分档筛选，
-  // 否则取听牌数最多（最难）的一种。简单/普通档按权重翻副露；
-  // 困难档带副露命中率过低，按 0.7/0.2/0.1 的权重走静态题池。
+  // 已下叫题：13-3m 张暗牌 + 副露，答案 = 能胡哪些牌及倍数。
   function makeTingProblem(rng = Math.random, difficulty = null) {
-    // 副露数只在进函数时抽一次签；若放进重试循环，门清生成一轮命中
-    // 困难档的概率低，会反复重掷把题池（副露）份额放大到七成
-    if (difficulty === "hard") {
-      const r = rng();
-      if (r < 0.3) {
-        const p = poolProblem(rng, "ting", r < 0.1 ? 2 : 1);
-        if (p) return p;
-      }
-    }
-    for (;;) {
-      const gen = randomCompleteHand(rng);
-      if (gen === null || !isWin(gen.counts)) continue;
-      const counts = gen.counts;
-      const melds = difficulty === "hard" ? [] : extractMelds(rng, counts, gen.triplets);
-      const variants = [];
-      for (let removed = 0; removed < 27; removed++) {
-        if (counts[removed] === 0) continue;
-        counts[removed] -= 1;
-        const tiles = huTiles(counts, melds);
-        counts[removed] += 1;
-        if (tiles.length > 0) variants.push({ removed, tiles });
-      }
-      let pool;
-      if (difficulty) {
-        pool = variants.filter((v) => inRange(v.tiles.length, "ting", difficulty));
-      } else {
-        const most = Math.max(0, ...variants.map((v) => v.tiles.length));
-        pool = variants.filter((v) => v.tiles.length === most);
-      }
-      if (pool.length === 0) continue;
-      const pick = choice(rng, pool);
-      counts[pick.removed] -= 1;
-
-      const handSuits = [...new Set(
-        counts.flatMap((c, i) => (c > 0 ? [Math.floor(i / 9)] : []))
-      )].sort();
-      const candidates = handSuits.flatMap((s) =>
-        Array.from({ length: 9 }, (_, r) => indexToTile(s * 9 + r)));
-      return {
-        mode: "ting",
-        hand: sortTiles(tilesFromCounts(counts)),
-        melds,
-        candidates,
-        answer: { hu_tiles: pick.tiles },
-      };
-    }
+    return drawProblem(rng, "ting", difficulty);
   }
 
   // 14-3m 张暗牌中所有打完即下叫的打法及各自听的牌。
@@ -560,60 +501,9 @@ const Majiang = (() => {
     return options;
   }
 
-  // 未下叫题：胡牌随机去一张暗牌，枚举补一张的所有可能。指定难度时按
-  // 答案数分档筛选，否则取能下叫的打法最多（选择最多、最难）的一种。
-  // 副露处理与听牌题相同。
+  // 未下叫题：14-3m 张暗牌 + 副露，答案 = 所有下叫打法及各自听的牌。
   function makeDiscardProblem(rng = Math.random, difficulty = null) {
-    // 抽签放循环外，理由同 makeTingProblem
-    if (difficulty === "hard") {
-      const r = rng();
-      if (r < 0.3) {
-        const p = poolProblem(rng, "discard", r < 0.1 ? 2 : 1);
-        if (p) return p;
-      }
-    }
-    for (;;) {
-      const kept = sampleTwoSuits(rng);
-      const missingSuit = SUITS[[0, 1, 2].find((s) => !kept.includes(s))];
-      const gen = randomCompleteHand(rng, kept);
-      if (gen === null || !isWin(gen.counts)) continue;
-      const counts = gen.counts;
-      const melds = difficulty === "hard" ? [] : extractMelds(rng, counts, gen.triplets);
-      const extra = meldExtra(melds);
-      counts[tileIndex(choice(rng, tilesFromCounts(counts)))] -= 1;
-
-      const variants = [];
-      for (const s of kept) {
-        for (let r = 0; r < 9; r++) {
-          const i = s * 9 + r;
-          if (counts[i] + extra[i] >= 4) continue;
-          counts[i] += 1;
-          if (!isWin(counts, melds)) {
-            const options = tingOptions(counts, missingSuit, melds);
-            if (options.length > 0) variants.push({ add: i, options });
-          }
-          counts[i] -= 1;
-        }
-      }
-      let pool;
-      if (difficulty) {
-        pool = variants.filter((v) => inRange(v.options.length, "discard", difficulty));
-      } else {
-        const most = Math.max(0, ...variants.map((v) => v.options.length));
-        pool = variants.filter((v) => v.options.length === most);
-      }
-      if (pool.length === 0) continue;
-      const pick = choice(rng, pool);
-      counts[pick.add] += 1;
-      pick.options.sort((a, b) => b.count - a.count);
-      return {
-        mode: "discard",
-        hand: sortTiles(tilesFromCounts(counts)),
-        melds,
-        missing_suit: missingSuit,
-        answer: { best: pick.options.map((d) => d.tile), detail: pick.options },
-      };
-    }
+    return drawProblem(rng, "discard", difficulty);
   }
 
   // 结账：局中赢家按比例交的茶钱筹码只记比例，真实茶钱现金另结。
